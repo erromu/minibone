@@ -24,7 +24,6 @@ if __name__ == "__main__":
                 "I awoke after a long sleep of {%d} seconds in the main thread"
                 % sleeping
             )
-            pass
 
     except KeyboardInterrupt:
         print("Caught keyboard interrupt, exiting")
