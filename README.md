@@ -28,5 +28,4 @@ Usage callback mode
 - Be sure your callable and methods are safe-thread to avoid race condition
 - call start() method to keep running callable in a new thread
 - call stop() to finish the thread
-"""
 
