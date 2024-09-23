@@ -5,7 +5,7 @@ from daemon import Daemon
 
 
 class Clock(Daemon):
-    """This is a simple clock examle.  It print the hour each second (it is not exact)"""
+    """This is a simple clock examle.  It prints the hour each second (it is not exact)"""
 
     def __init__(self):
         super().__init__(name="Clock", interval=1, sleep=0.01)
