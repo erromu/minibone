@@ -4,21 +4,15 @@ from datetime import datetime
 from daemon import Daemon
 
 
-class Clock(Daemon):
-    """This is a simple clock examle.  It print the hour each second"""
-
-    def __init__(self):
-        super().__init__(name="Clock", interval=1, sleep=0.01)
-
-    def on_process(self):
-        print(datetime.now().strftime("%Y-%m-%d:%H:%M:%S"))
+def callback():
+    print(datetime.now().strftime("%Y-%m-%d:%H:%M:%S"))
 
 
 if __name__ == "__main__":
     try:
-        print("Sample clock subclassing Daemon")
+        print("Sample clock using Daemon callback for the task")
         print("Press ctrl+c to exit")
-        clock = Clock()
+        clock = Daemon(name="Clock", interval=1, sleep=0.01, callback=callback)
         clock.start()
 
         while True:
