@@ -19,7 +19,7 @@ Usage
 - call start() method to keep running on_process in a new thread
 - call stop() to finish the thread
 
-Check clock.py for a sample
+Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/src/sample_clock.py) for a sample
 
 Usage callback mode
 -------------------
