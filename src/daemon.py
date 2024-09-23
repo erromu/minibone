@@ -99,7 +99,7 @@ class Daemon:
             if epoch > self._check:
                 self._check = epoch + self._interval
 
-                if self._callback is None:
+                if not self._callback:
                     self.on_process(**self._kwargs)
                 else:
                     self._callback(**self._kwargs)
