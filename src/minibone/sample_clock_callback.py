@@ -1,3 +1,8 @@
+"""This is a simple clock sample.
+
+It prints current time each second using a Daemon callback
+"""
+
 import time
 from datetime import datetime
 

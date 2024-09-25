@@ -4,7 +4,7 @@ import time
 
 
 class Daemon:
-    """This is the base class to create a new thread for running tasks
+    """This class is to run tasks in the background in another thread
 
     Usage
     -----
@@ -17,6 +17,8 @@ class Daemon:
     - call start() method to keep running on_process in a new thread
     - call stop() to finish the thread
 
+    - check minibone.sample_clock.py out if you want to learn how to use it
+
     Usage callback mode
     -------------------
     - Instance Daemon by passing a callable
@@ -24,6 +26,8 @@ class Daemon:
     - Be sure your callable and methods are safe-thread to avoid race condition
     - call start() method to keep running callable in a new thread
     - call stop() to finish the thread
+
+    - check minibone.sample_clock_callback.py out if you want to learn how to use it
     """
 
     def __init__(
@@ -38,7 +42,7 @@ class Daemon:
         """
         Arguments
         ---------
-        name        str         name for this task
+        name        str         name for this thread
 
         interval    int         Number of interval seconds to run on_process.
                                 Must be >= 0
@@ -46,7 +50,7 @@ class Daemon:
         sleep       int         Number of seconds to sleep on each interation when iddle.
                                 Must be >= 0.01 and <= 1
 
-        callback    callable    A callable object to be called instead of on_process
+        callback    callable    [Optional] A callable object to be called instead of on_process
                                 Default None.
 
         iter        int         How many times to run this task. iter must be >= 1 or -1
@@ -56,8 +60,8 @@ class Daemon:
 
         Notes
         -----
-        Sleep will block the thread, so if stop is called it will wait until sleep is done.
-        Sleep is implemented in a convenient way so this does not get resources hungry
+        sleep will block the thread, so if stop is called it will wait until sleep is done.
+        sleep is implemented in a convenient way so this does not get resources hungry
         due to an iddle state just iterating in the loop waiting for something to do
 
         Thumb of usage for sleep:
@@ -86,7 +90,11 @@ class Daemon:
         self._kwargs = kwargs
 
     def on_process(self):
-        """Overwrite this method to add your logic to be run"""
+        """Process to be called on each interation.
+
+        If a callback was  added, then it will be called instead.
+        When subclasing Daemon, verwrite this method to add your logic to be run
+        """
         pass
 
     def _do_process(self):
@@ -110,7 +118,7 @@ class Daemon:
                         return
 
     def start(self):
-        """Start running on_process periodically"""
+        """Start running on_process/callback periodically"""
 
         if self._started:
             self._logger.error("%s thread already started. Stop it first", self._name)
@@ -132,7 +140,7 @@ class Daemon:
         )
 
     def stop(self):
-        """Stop the thread on_process"""
+        """Stop this thread on_process/calback"""
         self._stopping = True
         self._started = False
 
