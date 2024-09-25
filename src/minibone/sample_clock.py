@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 
-from minibone.daemon import Daemon
+from daemon import Daemon
 
 
 class Clock(Daemon):
