@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 
-from daemon import Daemon
+from minibone.daemon import Daemon
 
 
 def callback():
