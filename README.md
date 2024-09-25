@@ -6,7 +6,7 @@ Minibone is a set of common classes for:
 
 ## Multithreading
 
-It is Just another python class to do background jobs / tasks
+It is just another python class to do background jobs / tasks
 
 Usage
 -----
@@ -19,7 +19,7 @@ Usage
 - call start() method to keep running on_process in a new thread
 - call stop() to finish the thread
 
-Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/src/sample_clock.py) for a sample
+Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock.py) for a sample
 
 Usage callback mode
 -------------------
@@ -29,4 +29,4 @@ Usage callback mode
 - call start() method to keep running callable in a new thread
 - call stop() to finish the thread
 
-Check [sample_clock_callback.py](https://github.com/erromu/minibone/blob/main/src/sample_clock_callback.py) for a sample
+Check [sample_clock_callback.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock_callback.py) for a sample
