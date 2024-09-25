@@ -116,9 +116,7 @@ class Daemon:
             self._logger.error("%s thread already started. Stop it first", self._name)
             return
 
-        self._process = threading.Thread(
-            target=self._do_process, daemon=True, name=self._name
-        )
+        self._process = threading.Thread(target=self._do_process, daemon=True, name=self._name)
 
         self._started = True
         self._stopping = False

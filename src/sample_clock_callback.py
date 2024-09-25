@@ -20,10 +20,7 @@ if __name__ == "__main__":
             sleeping = 15
             time.sleep(sleeping)
             # clock will be running in the background in another thread
-            print(
-                "I awoke after a long sleep of {%d} seconds in the main thread"
-                % sleeping
-            )
+            print("I awoke after a long sleep of {%d} seconds in the main thread" % sleeping)
 
     except KeyboardInterrupt:
         print("Caught keyboard interrupt, exiting")
