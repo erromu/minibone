@@ -1,14 +1,14 @@
 [![Check](https://github.com/erromu/minibone/actions/workflows/python-check.yml/badge.svg)](https://github.com/erromu/minibone/actions/workflows/python-check.yml)  [![Deploy](https://github.com/erromu/minibone/actions/workflows/python-publish.yml/badge.svg)](https://github.com/erromu/minibone/actions/workflows/python-publish.yml)
 
 # minibone
-Minibone is a set of common classes for:
+Small boiler plate with tools for multithreading.
 
-- Multithreading
+Minibone is a set of valuable classes for:
+
+- __Daemon__: for multithreading tasks
 - Among others (I will add more later)
 
-## Deployed on PyPi
-
-A deploy to PyPi will be triggered on each release for minibone package
+It will be deployed to PyPi when a new release is created
 
 ## Installation
 
@@ -20,8 +20,8 @@ A deploy to PyPi will be triggered on each release for minibone package
 
 It is just another python class to do jobs / tasks in the background
 
-Usage
------
+#### Usage as SubClass
+
 - Subclass Daemon
 - call super().__init__() in yours
 - Overwrite on_process method with yours
@@ -33,8 +33,8 @@ Usage
 
 Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock.py) for a sample
 
-Usage callback mode
--------------------
+#### Usage as callback mode
+
 - Instance Daemon by passing a callable
 - Add logic to your callable method
 - Be sure your callable and methods are safe-thread to avoid race condition
@@ -45,5 +45,5 @@ Check [sample_clock_callback.py](https://github.com/erromu/minibone/blob/main/sr
 
 ## Contribution
 
-- Feel free to clone this repository, and send any pull request.
+- Feel free to clone this repository, and send any pull requests.
 - Add issues if something is not working as expected.
