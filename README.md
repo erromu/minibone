@@ -1,3 +1,5 @@
+[![Check](https://github.com/erromu/minibone/actions/workflows/python-check.yml/badge.svg)](https://github.com/erromu/minibone/actions/workflows/python-check.yml)
+
 # minibone
 Minibone is a set of common classes for:
 
