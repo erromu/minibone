@@ -1,14 +1,22 @@
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+
+# https://packaging.python.org/en/latest/specifications/core-metadata/
+
 [project]
 name = "minibone"
 version = "0.0.3"
-description = "Small boiler plate with tools for multithreading"
+description = "Small boiler plate with tools for multithreading."
+keywords = ["multithreading", "task", "job", "background"]
 authors = [
     {name = "Erick Romero", email = "erick@gjrlabs.com"}
 ]
 license = {file = "LICENSE"}
+readme = "README.md"
 
 # https://pypi.org/classifiers/
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU Affero General Public License v3",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -21,6 +29,10 @@ dependencies = []
 [project.urls]
 "Homepage" = "https://github.com/erromu/minibone/"
 "Bug Tracker" = "https://github.com/erromu/minibone/issues"
+"Issues" = "https://github.com/erromu/minibone/issues"
+"Documentation" = "https://www.gjrlabs.com"
+"Repository" = "https://github.com/erromu/minibone.git"
+#"Changelog" = ""
 
 [tool.ruff]
 # Set the maximum line length to 79.
