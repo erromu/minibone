@@ -26,4 +26,7 @@ jobs:
       - name: Check the package
         run: ruff check --no-fix --statistics
       - name: Run tests
-        run: python -m unittest -v ./tests/test_daemon.py
+        run: |
+          ls -la
+          pwd
+          python -m unittest -v ./tests/test_daemon.py
