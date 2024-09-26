@@ -1,6 +1,6 @@
 [project]
 name = "minibone"
-version = "0.0.1"
+version = "0.0.2"
 description = "Small boiler plate with tools for multithreading"
 authors = [
     {name = "Erick Romero", email = "erick@gjrlabs.com"}
