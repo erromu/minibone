@@ -2,7 +2,7 @@ import time
 import unittest
 from threading import Lock
 
-from minibone.daemon import Daemon
+from src.minibone.daemon import Daemon
 
 
 class DaemonSubClass(Daemon):

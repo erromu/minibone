@@ -4,7 +4,7 @@
 
 [project]
 name = "minibone"
-version = "0.0.4"
+version = "0.1.0"
 description = "Small boiler plate with tools for multithreading."
 keywords = ["multithreading", "task", "job", "background"]
 authors = [
@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 requires-python = ">=3.0"
-dependencies = []
+dependencies = ["tomlkit", "pyyaml"]
 
 [project.urls]
 "Homepage" = "https://github.com/erromu/minibone/"

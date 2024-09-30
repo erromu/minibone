@@ -6,6 +6,7 @@ Small boiler plate with tools for multithreading.
 Minibone is a set of valuable classes for:
 
 - __Daemon__: for multithreading tasks
+- __Config__: To handle configuration setting
 - Among others (I will add more later)
 
 It will be deployed to PyPi when a new release is created
@@ -42,6 +43,20 @@ Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/src/minibon
 - call stop() to finish the thread
 
 Check [sample_clock_callback.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock_callback.py) for a sample
+
+### Config
+
+Allows to handle configuration settings in memory and persists them into toml/yaml/json format
+
+> from minibone.config import Config
+>
+> cfg = Config(settings={"listen": "localhost", "port": 80}, filepath="config.toml")
+> 
+> cfg.add("debug", True)
+>
+> cfg.to_toml()
+>
+> cfg2 = Config.from_toml("config.toml")
 
 ## Contribution
 

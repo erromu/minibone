@@ -92,8 +92,8 @@ class Daemon:
     def on_process(self):
         """Process to be called on each interation.
 
-        If a callback was  added, then it will be called instead.
-        When subclasing Daemon, verwrite this method to add your logic to be run
+        If a callback was added, then it will be called instead.
+        When subclasing Daemon, rewrite this method to add your logic to be run
         """
         pass
 
