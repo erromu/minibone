@@ -12,15 +12,19 @@ It will be deployed to PyPi when a new release is created
 
 ## Installation
 
-> $ pip install minibone
+```shell
+
+pip install minibone
+
+```
 
 ## Usage
 
 ### Daemon
 
-It is just another python class to do jobs / tasks in the background
+It is just another python class to do jobs / tasks in the background using threads. It can be used in two modes: subclasing and callback
 
-#### Usage as SubClass
+#### Usage as SubClass mode
 
 - Subclass Daemon
 - call super().__init__() in yours
@@ -45,17 +49,21 @@ Check [sample_clock_callback.py](https://github.com/erromu/minibone/blob/main/sr
 
 ### Config
 
-Allows to handle configuration settings in memory and persists them into toml/yaml/json format
+Allows to handle configuration settings in memory and/or persists them into toml/yaml/json formats
 
-> from minibone.config import Config
->
-> cfg = Config(settings={"listen": "localhost", "port": 80}, filepath="config.toml")
-> 
-> cfg.add("debug", True)
->
-> cfg.to_toml()
->
-> cfg2 = Config.from_toml("config.toml")
+```python
+
+from minibone.config import Config
+
+# Create a new set of settings
+cfg = Config(settings={"listen": "localhost", "port": 80}, filepath="config.toml")	
+cfg.add("debug", True)	
+cfg.to_toml()
+
+# Load settings from a file. Defaults can be set. More information: help(Config.from_toml)
+cfg2 = Config.from_toml("config.toml")
+
+```
 
 ## Contribution
 
