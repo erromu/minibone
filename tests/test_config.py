@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 from pathlib import Path
 
@@ -27,7 +28,7 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(cfg.merge(defaults={"z": 1}, settings={"z": 4}), {"z": 4})
 
         cfgs = []
-        files = ["config.toml", "config.yaml", "config.json"]
+        files = ["config.toml", "config.yaml", "config.json", "aconfig.toml", "aconfig.yaml", "aconfig.json"]
         for file in files:
             cfgs.append(Config(settings=cfg, filepath=file))
 
@@ -38,6 +39,14 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(cfgs[0].from_toml(cfgs[0].filepath), cfg)
         self.assertEqual(cfgs[1].from_yaml(cfgs[1].filepath), cfg)
         self.assertEqual(cfgs[2].from_json(cfgs[2].filepath), cfg)
+
+        asyncio.run(cfgs[3].aioto_toml())
+        asyncio.run(cfgs[4].aioto_yaml())
+        asyncio.run(cfgs[5].aioto_json())
+
+        self.assertEqual(asyncio.run(cfgs[3].aiofrom_toml(cfgs[3].filepath)), cfg)
+        self.assertEqual(asyncio.run(cfgs[4].aiofrom_yaml(cfgs[4].filepath)), cfg)
+        self.assertEqual(asyncio.run(cfgs[5].aiofrom_json(cfgs[5].filepath)), cfg)
 
         for file in files:
             p = Path(file)
