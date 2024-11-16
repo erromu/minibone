@@ -229,7 +229,7 @@ class Config(dict):
                     json.dump(self.copy(), f)
 
         except Exception as e:
-            self._logger.error("_tofile %S error %s. %s", format.value, self.filepath, e)
+            self._logger.error("_tofile %s error %s. %s", format.value, self.filepath, e)
 
     async def _aiotofile(self, format: FORMAT):
         """Save settings to file in format
