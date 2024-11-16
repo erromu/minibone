@@ -21,13 +21,13 @@ pip install minibone
 
 ## Config
 
-Allows to handle configuration settings in memory and/or persists them into toml/yaml/json formats
+Allows to handle configuration settings in memory and/or persist them into toml/yaml/json formats
 
 ```python
 
 from minibone.config import Config
 
-# Create a new set of settings and persists them
+# Create a new set of settings and persist them
 cfg = Config(settings={"listen": "localhost", "port": 80}, filepath="config.toml")	
 cfg.add("debug", True)	
 cfg.to_toml()
@@ -35,6 +35,10 @@ cfg.to_toml()
 # Load settings from a file. Defaults can be set. More information: help(Config.from_toml)
 cfg2 = Config.from_toml("config.toml")
 
+# also there are async counter part methods
+import asyncio
+
+cfg3 = asyncio.run(Config.aiofrom_toml("config.toml"))
 ```
 
 
