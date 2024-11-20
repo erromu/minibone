@@ -28,6 +28,10 @@ class Daemon:
     - call stop() to finish the thread
 
     - check minibone.sample_clock_callback.py out if you want to learn how to use it
+
+    Notes:
+    ------
+    start() must be called once only
     """
 
     def __init__(
@@ -37,6 +41,7 @@ class Daemon:
         sleep: float = 0.5,
         callback=None,
         iter: int = -1,
+        daemon: bool = True,
         **kwargs,
     ):
         """
@@ -56,6 +61,8 @@ class Daemon:
         iter        int         How many times to run this task. iter must be >= 1 or -1
                                 -1 runs forever until stopped
 
+        daemon      bool        True to set it as a daemon, False otherwise
+
         kwargs                  Additional params you need to pass
 
         Notes
@@ -72,10 +79,10 @@ class Daemon:
         assert isinstance(sleep, (float, int)) and sleep >= 0.01 and sleep <= 1
         assert not callback or callable(callback)
         assert isinstance(iter, int) and (iter == -1 or iter >= 1)
+        assert isinstance(daemon, bool)
         self._logger = logging.getLogger(__class__.__name__)
 
         self.lock = threading.Lock()
-        self._started = False
         self._stopping = False
 
         self._name = name
@@ -85,9 +92,11 @@ class Daemon:
         self._iter = iter
         self._count = 0
 
-        self._process = None
         self._callback = callback
-        self._kwargs = kwargs
+
+        self._process = threading.Thread(
+            name=self._name, target=self._do_process, kwargs=kwargs, daemon=True if daemon else None
+        )
 
     def on_process(self):
         """Process to be called on each interation.
@@ -97,37 +106,29 @@ class Daemon:
         """
         pass
 
-    def _do_process(self):
+    def _do_process(self, **kwargs):
         while True:
             if self._stopping:
                 return
 
-            time.sleep(self._sleep)
             epoch = time.time()
             if epoch > self._check:
                 self._check = epoch + self._interval
 
                 if not self._callback:
-                    self.on_process(**self._kwargs)
+                    self.on_process(**kwargs)
                 else:
-                    self._callback(**self._kwargs)
+                    self._callback(**kwargs)
 
                 if self._iter > 0:
                     self._count += 1
                     if self._count >= self._iter:
                         return
 
+            time.sleep(self._sleep)
+
     def start(self):
         """Start running on_process/callback periodically"""
-
-        if self._started:
-            self._logger.error("%s thread already started. Stop it first", self._name)
-            return
-
-        self._process = threading.Thread(target=self._do_process, daemon=True, name=self._name)
-
-        self._started = True
-        self._stopping = False
 
         self._process.start()
 
@@ -141,8 +142,9 @@ class Daemon:
 
     def stop(self):
         """Stop this thread on_process/calback"""
+        self.lock.acquire()
         self._stopping = True
-        self._started = False
+        self.lock.release()
 
         self._logger.debug(
             "stopping %s task at interval: %.2f sleep: %.2f iterate: %d",
