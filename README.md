@@ -7,6 +7,8 @@ minbone is a small boiler plate with tools for multithreading and others.
 - __Config__: To handle configuration setting
 - __Daemon__: For multithreading tasks
 - __Logging__: To setup a logger friendly with filerotation 
+- __PARProcesses__: To run parallel tasks as processes
+- __PARThreads__: To run parallel tasks in threads 
 - Among others (I will add more later)
 
 It will be deployed to PyPi when a new release is created

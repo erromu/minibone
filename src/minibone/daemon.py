@@ -100,7 +100,7 @@ class Daemon:
 
     def on_process(self):
         """Method to be called on each interation.
-        Overwirite it with your logic if a callback was not set
+        Overwrite it with your logic if a callback is not set
 
         Do not forget to make your code safe-thread using lock.acquire and lock.release
         """
@@ -141,7 +141,7 @@ class Daemon:
         )
 
     def stop(self):
-        """Stop this thread on_process/calback"""
+        """Stop interating on on_process/callback and exit this thread"""
         self.lock.acquire()
         self._stopping = True
         self.lock.release()
