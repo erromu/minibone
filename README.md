@@ -21,7 +21,7 @@ pip install minibone
 
 ## Config
 
-Allows to handle configuration settings in memory and/or persist them into toml/yaml/json formats
+Handle configuration settings in memory and/or persist them into toml/yaml/json formats
 
 ```python
 
@@ -40,7 +40,6 @@ import asyncio
 
 cfg3 = asyncio.run(Config.aiofrom_toml("config.toml"))
 ```
-
 
 Usually config files are editted externaly then loaded as read only on your code, so in such case, you may want to subclass Config for easier usage
 
@@ -69,10 +68,37 @@ if __name__ == "__main__":
 
 ```
 
+## Daemon
+
+It is just another python class to run a periodical task in another thread. It can be used in two modes: subclasing and callback
+
+#### Usage as SubClass mode
+
+- Subclass Daemon
+- call super().__init__() in yours
+- Overwrite on_process method with yours
+- Add logic you want to run inside on_process
+- Be sure your methods are safe-thread to avoid race condition
+- self.lock is available for lock.acquire / your_logic / lock.release
+- call start() method to keep running on_process in a new thread
+- call stop() to finish the thread
+
+Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock.py) for a sample
+
+#### Usage as callback mode
+
+- Instance Daemon by passing a callable
+- Add logic to your callable method
+- Be sure your callable is safe-thread to avoid race condition
+- call start() method to keep running callable in a new thread
+- call stop() to finish the thread
+
+Check [sample_clock_callback.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock_callback.py) for a sample
+
 ## Logging
 
-It allows to setup a logger using UTC time that outputs to stderr or to a file.
-It is friendly to filerotation when setting output to a file
+Setup a logger using UTC time that outputs logs to stdin or to a file.
+It is friendly to filerotation (when setting output to a file)
 
 ```python
 
@@ -94,36 +120,7 @@ if __name__ == "__main__":
 
 ```
 
-## Daemon
-
-It is just another python class to do jobs / tasks in the background using threads. It can be used in two modes: subclasing and callback
-
-#### Usage as SubClass mode
-
-- Subclass Daemon
-- call super().__init__() in yours
-- Overwrite on_process method with yours
-- Add logic you want to run inside on_process
-- Be sure your methods are safe-thread to avoid race condition
-- self.lock is available for { lock.acquire => your_logic => lock.release }
-- call start() method to keep running on_process in a new thread
-- call stop() to finish the thread
-
-Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock.py) for a sample
-
-#### Usage as callback mode
-
-- Instance Daemon by passing a callable
-- Add logic to your callable method
-- Be sure your callable and methods are safe-thread to avoid race condition
-- call start() method to keep running callable in a new thread
-- call stop() to finish the thread
-
-Check [sample_clock_callback.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock_callback.py) for a sample
-
-
-
 ## Contribution
 
-- Feel free to clone this repository, and send any pull requests.
+- Feel free to clone this repository and send any pull requests.
 - Add issues if something is not working as expected.

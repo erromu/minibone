@@ -4,7 +4,7 @@ import time
 
 
 class Daemon:
-    """This class is to run tasks in the background in another thread
+    """Class to run a periodical task in another thread
 
     Usage
     -----
@@ -17,21 +17,21 @@ class Daemon:
     - call start() method to keep running on_process in a new thread
     - call stop() to finish the thread
 
-    - check minibone.sample_clock.py out if you want to learn how to use it
+    - check minibone.sample_clock.py if you want to learn how to use it
 
     Usage callback mode
     -------------------
     - Instance Daemon by passing a callable
     - Add logic to your callable method
-    - Be sure your callable and methods are safe-thread to avoid race condition
+    - Be sure your callable is safe-thread to avoid race condition
     - call start() method to keep running callable in a new thread
     - call stop() to finish the thread
 
-    - check minibone.sample_clock_callback.py out if you want to learn how to use it
+    - check minibone.sample_clock_callback.py if you want to learn how to use it
 
     Notes:
     ------
-    start() must be called once only
+    start() must be called only once
     """
 
     def __init__(
@@ -61,15 +61,15 @@ class Daemon:
         iter        int         How many times to run this task. iter must be >= 1 or -1
                                 -1 runs forever until stopped
 
-        daemon      bool        True to set it as a daemon, False otherwise
+        daemon      bool        True to set the Thread as a daemon, False otherwise
 
         kwargs                  Additional params you need to pass
 
         Notes
         -----
         sleep will block the thread, so if stop is called it will wait until sleep is done.
-        sleep is implemented in a convenient way so this does not get resources hungry
-        due to an iddle state just iterating in the loop waiting for something to do
+        sleep was implemented as a convenient way to avoid? it does not get resources hungry
+        when in iddle state inside the bucle iterating/waiting for something to do
 
         Thumb of usage for sleep:
         Set to 0.01 if on_process is high priority
@@ -99,10 +99,10 @@ class Daemon:
         )
 
     def on_process(self):
-        """Process to be called on each interation.
+        """Method to be called on each interation.
+        Overwirite it with your logic if a callback was not set
 
-        If a callback was added, then it will be called instead.
-        When subclasing Daemon, rewrite this method to add your logic to be run
+        Do not forget to make your code safe-thread using lock.acquire and lock.release
         """
         pass
 
@@ -115,10 +115,10 @@ class Daemon:
             if epoch > self._check:
                 self._check = epoch + self._interval
 
-                if not self._callback:
-                    self.on_process(**kwargs)
-                else:
+                if self._callback:
                     self._callback(**kwargs)
+                else:
+                    self.on_process(**kwargs)
 
                 if self._iter > 0:
                     self._count += 1
@@ -145,6 +145,7 @@ class Daemon:
         self.lock.acquire()
         self._stopping = True
         self.lock.release()
+        self._process.join()
 
         self._logger.debug(
             "stopping %s task at interval: %.2f sleep: %.2f iterate: %d",
