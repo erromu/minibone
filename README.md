@@ -2,13 +2,14 @@
 
 [![Check](https://github.com/erromu/minibone/actions/workflows/python-check.yml/badge.svg)](https://github.com/erromu/minibone/actions/workflows/python-check.yml)  [![Deploy](https://github.com/erromu/minibone/actions/workflows/python-publish.yml/badge.svg)](https://github.com/erromu/minibone/actions/workflows/python-publish.yml) [![PyPI version](https://badge.fury.io/py/minibone.svg)](https://pypi.org/project/minibone)
 
-minbone is a small boiler plate with tools for multithreading and others.
+minibone is an easy to use yet powerful boiler plate for multithreading, multiprocessing and others:
 
 - __Config__: To handle configuration settings
 - __Daemon__: To run a periodical task in another thread
 - __Logging__: To setup a logger friendly with filerotation 
 - __PARProcesses__: To run parallel tasks as processes
 - __PARThreads__: To run parallel tasks in threads 
+- __Storing__: To queue and store files periodically in a thread (queue and forget)
 - Among others (I will add more later)
 
 It will be deployed to PyPi when a new release is created

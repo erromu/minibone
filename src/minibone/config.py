@@ -20,72 +20,64 @@ class Config(dict):
     """Class to have settings in memory or in a configuration file"""
 
     @classmethod
-    def from_file(cls, format: FORMAT, filepath: str, defaults: dict = None):
-        """Load a file configuration and return a Config instance
+    def from_file(cls, format: FORMAT, filepath: str):
+        """Load a file and return the content in the specified FORMAT
 
         Arguments
         ---------
         format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
         filepath:   str     The filepath of the file to load
-        defaults:   dict    A dictionary with default settings.
-                            Values from the file will expand/replace defaults
         """
         assert isinstance(format, FORMAT)
         assert isinstance(filepath, str) and len(filepath) > 0
-        assert not defaults or isinstance(defaults, dict)
 
-        logger = logging.getLogger(__class__.__name__)
-
-        settings = {}
+        data = None
 
         try:
             file = "{path}".format(path=filepath)
             with open(file, "rt", encoding="utf-8") as f:
                 if format == FORMAT.TOML:
-                    settings = tomlkit.load(f)
+                    data = tomlkit.load(f)
                 elif format == FORMAT.YAML:
-                    settings = yaml.safe_load(f)
+                    data = yaml.safe_load(f)
                 elif format == FORMAT.JSON:
-                    settings = json.load(f)
+                    data = json.load(f)
 
         except Exception as e:
+            logger = logging.getLogger(__class__.__name__)
             logger.error("from_file %s error loading %s. %s", format.value, filepath, e)
 
-        return Config(cls.merge(defaults, settings), filepath)
+        return data
 
     @classmethod
-    async def aiofrom_file(cls, format: FORMAT, filepath: str, defaults: dict = None):
-        """Load a file configuration in async mode and return a Config instance
+    async def aiofrom_file(cls, format: FORMAT, filepath: str):
+        """Load a file in async mode and return the content in the specified FORMAT
 
         Arguments
         ---------
         format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
         filepath:   str     The filepath of the file to load
-        defaults:   dict    A dictionary with default settings.
-                            Values from the file will expand/replace defaults
         """
         assert isinstance(format, FORMAT)
         assert isinstance(filepath, str) and len(filepath) > 0
-        assert not defaults or isinstance(defaults, dict)
 
-        logger = logging.getLogger(__class__.__name__)
-
-        settings = {}
+        data = None
 
         try:
             file = "{path}".format(path=filepath)
             async with aiofiles.open(file, "rt", encoding="utf-8") as f:
                 if format == FORMAT.TOML:
-                    settings = tomlkit.loads(await f.read())
+                    data = tomlkit.loads(await f.read())
                 elif format == FORMAT.YAML:
-                    settings = yaml.safe_load(await f.read())
+                    data = yaml.safe_load(await f.read())
                 elif format == FORMAT.JSON:
-                    settings = json.loads(await f.read())
+                    data = json.loads(await f.read())
 
         except Exception as e:
+            logger = logging.getLogger(__class__.__name__)
             logger.error("aiofrom_file %s error loading %s. %s", format.value, filepath, e)
 
-        return Config(cls.merge(defaults, settings), filepath)
+        return data
 
     @classmethod
     def from_toml(cls, filepath: str, defaults: dict = None):
@@ -97,7 +89,8 @@ class Config(dict):
         defaults:   dict    A dictionary with default settings.
                             Values from the file will expand/replace defaults
         """
-        return cls.from_file(FORMAT.TOML, filepath, defaults)
+        settings = cls.from_file(FORMAT.TOML, filepath)
+        return Config(cls.merge(defaults, settings), filepath)
 
     @classmethod
     def from_yaml(cls, filepath: str, defaults: dict = None):
@@ -109,7 +102,8 @@ class Config(dict):
         defaults:   dict    A dictionary with default settings.
                             Values from the file will expand/replace defaults
         """
-        return cls.from_file(FORMAT.YAML, filepath, defaults)
+        settings = cls.from_file(FORMAT.YAML, filepath)
+        return Config(cls.merge(defaults, settings), filepath)
 
     @classmethod
     def from_json(cls, filepath: str, defaults: dict = None):
@@ -121,7 +115,8 @@ class Config(dict):
         defaults:   dict    A dictionary with default settings.
                             Values from the file will expand/replace defaults
         """
-        return cls.from_file(FORMAT.JSON, filepath, defaults)
+        settings = cls.from_file(FORMAT.JSON, filepath)
+        return Config(cls.merge(defaults, settings), filepath)
 
     @classmethod
     async def aiofrom_toml(cls, filepath: str, defaults: dict = None):
@@ -133,7 +128,8 @@ class Config(dict):
         defaults:   dict    A dictionary with default settings.
                             Values from the file will expand/replace defaults
         """
-        return await cls.aiofrom_file(FORMAT.TOML, filepath, defaults)
+        settings = await cls.aiofrom_file(FORMAT.TOML, filepath)
+        return Config(cls.merge(defaults, settings), filepath)
 
     @classmethod
     async def aiofrom_yaml(cls, filepath: str, defaults: dict = None):
@@ -145,7 +141,8 @@ class Config(dict):
         defaults:   dict    A dictionary with default settings.
                             Values from the file will expand/replace defaults
         """
-        return await cls.aiofrom_file(FORMAT.YAML, filepath, defaults)
+        settings = await cls.aiofrom_file(FORMAT.YAML, filepath)
+        return Config(cls.merge(defaults, settings), filepath)
 
     @classmethod
     async def aiofrom_json(cls, filepath: str, defaults: dict = None):
@@ -157,7 +154,8 @@ class Config(dict):
         defaults:   dict    A dictionary with default settings.
                             Values from the file will expand/replace defaults
         """
-        return await cls.aiofrom_file(FORMAT.JSON, filepath, defaults)
+        settings = await cls.aiofrom_file(FORMAT.JSON, filepath)
+        return Config(cls.merge(defaults, settings), filepath)
 
     @classmethod
     def merge(cls, defaults: dict = None, settings: dict = None) -> dict:
@@ -179,6 +177,66 @@ class Config(dict):
         # TODO return a merge including second and nth sub-levels on the dict
         return defaults | settings
 
+    @classmethod
+    def to_file(cls, format: FORMAT, filepath: str, data: dict | list):
+        """Save data to a file in the specified format
+
+        Arguments
+        ---------
+        format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
+        """
+        assert isinstance(format, FORMAT)
+        assert isinstance(filepath, str) and len(filepath) > 0
+        assert isinstance(data, (dict, list))
+
+        try:
+            file = Path(filepath)
+            parent = Path(file.parent) if not file.exists() else None
+            if parent and not parent.exists():
+                parent.mkdir(exist_ok=True, parents=True)
+
+            with open(filepath, "wt", encoding="utf-8") as f:
+                if format == FORMAT.TOML:
+                    tomlkit.dump(data, f)
+                elif format == FORMAT.YAML:
+                    yaml.dump(data, f)
+                elif format == FORMAT.JSON:
+                    json.dump(data, f)
+
+        except Exception as e:
+            logger = logging.getLogger(__class__.__name__)
+            logger.error("to_file %s error %s. %s", format.value, filepath, e)
+
+    @classmethod
+    async def aioto_file(cls, format: FORMAT, filepath: str, data: dict | list):
+        """Save data in async mode to a file in the specified format
+
+        Arguments
+        ---------
+        format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
+        """
+        assert isinstance(format, FORMAT)
+        assert isinstance(filepath, str) and len(filepath) > 0
+        assert isinstance(data, (dict, list))
+
+        try:
+            file = Path(filepath)
+            parent = Path(file.parent) if not file.exists() else None
+            if parent and not parent.exists():
+                parent.mkdir(exist_ok=True, parents=True)
+
+            async with aiofiles.open(filepath, "wt", encoding="utf-8") as f:
+                if format == FORMAT.TOML:
+                    await f.write(tomlkit.dumps(data))
+                elif format == FORMAT.YAML:
+                    await f.write(yaml.dump(data))
+                elif format == FORMAT.JSON:
+                    await f.write(json.dumps(data))
+
+        except Exception as e:
+            logger = logging.getLogger(__class__.__name__)
+            logger.error("aioto_file %s error %s. %s", format.value, filepath, e)
+
     def __init__(self, settings: dict = {}, filepath: str = None):
         """
         Arguments
@@ -199,42 +257,25 @@ class Config(dict):
         for key, value in settings.items():
             self.add(key, value)
 
-    def _parent_exits(self):
-        """create the parent directory if it does not exits"""
-        file = Path(self.filepath)
-        parent = Path(file.parent) if not file.exists() else None
-        if parent and not parent.exists():
-            parent.mkdir(exist_ok=True, parents=True)
-
     def _tofile(self, format: FORMAT):
         """Save settings to file in format
-        Arguments:
-        ----------
+
+        Arguments
+        ---------
         format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
         """
         assert isinstance(format, FORMAT)
-
         if not self.filepath:
             self._logger.error("_tofile Not filepath defined for %s. Aborting", format.value)
             return
 
-        try:
-            self._parent_exits()
-            with open(self.filepath, "wt", encoding="utf-8") as f:
-                if format == FORMAT.TOML:
-                    tomlkit.dump(self.copy(), f)
-                elif format == FORMAT.YAML:
-                    yaml.dump(self.copy(), f)
-                elif format == FORMAT.JSON:
-                    json.dump(self.copy(), f)
-
-        except Exception as e:
-            self._logger.error("_tofile %s error %s. %s", format.value, self.filepath, e)
+        self.to_file(format=format, filepath=self.filepath, data=self.copy())
 
     async def _aiotofile(self, format: FORMAT):
         """Save settings to file in format
-        Arguments:
-        ----------
+
+        Arguments
+        ---------
         format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
         """
         assert isinstance(format, FORMAT)
@@ -243,19 +284,7 @@ class Config(dict):
             self._logger.error("_aiotofile Not filepath defined for %s. Aborting", format.value)
             return
 
-        try:
-            self._parent_exits()
-
-            async with aiofiles.open(self.filepath, "wt", encoding="utf-8") as f:
-                if format == FORMAT.TOML:
-                    await f.write(tomlkit.dumps(self.copy()))
-                elif format == FORMAT.YAML:
-                    await f.write(yaml.dump(self.copy()))
-                elif format == FORMAT.JSON:
-                    await f.write(json.dumps(self.copy()))
-
-        except Exception as e:
-            self._logger.error("_aiotofile %s error %s. %s", format.value, self.filepath, e)
+        await self.aioto_file(format=format, filepath=self.filepath, data=self.copy())
 
     def to_toml(self):
         """Save settings to file in toml format"""
@@ -283,6 +312,7 @@ class Config(dict):
 
     def add(self, key: str, value):
         """Add/set a setting
+
         Arguments
         ---------
         key:    str         A str valid key to name this setting.
@@ -298,6 +328,7 @@ class Config(dict):
 
     def remove(self, key: str):
         """Remove a setting from this configuration
+
         Arguments
         ---------
         key:    str         The key of the setting to remove
