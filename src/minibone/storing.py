@@ -1,8 +1,8 @@
 import logging
 from collections import deque
 
-from src.minibone.config import FORMAT, Config
-from src.minibone.daemon import Daemon
+from minibone.config import FORMAT, Config
+from minibone.daemon import Daemon
 
 
 class Storing(Daemon):
