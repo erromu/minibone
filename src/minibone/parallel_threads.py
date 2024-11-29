@@ -151,23 +151,30 @@ class PARThreads(Daemon):
 
         return None
 
-    def queue(self, callback, cmd: str = "UID", **kwargs) -> str:
+    def queue(self, callback, cmd: str = "UID", keep: bool = True, **kwargs) -> str:
         """Queue a task and return an UID to get the result later
 
         Arguments
         ---------
         callback:   object  A callable object
         cmd:        str     Any command to prefix the UID to return
+        keep:       bool    Set to True to keep the callback's result in memory
+                            Set to False to forget it. Usefull for callbacks that returns nothing
         kwargs:     dict    a dick with key/value parameters
+
+        Notes
+        -----
+        If keep is set, do not forget to call get(uid) to free memory
         """
         assert callable(callable)
+        assert isinstance(keep, bool)
         assert not kwargs or isinstance(kwargs, dict)
 
         if not kwargs:
             kwargs = dict()
 
         uid = self._uid(cmd)
-        item = {"uid": uid, "callback": callback, "kwargs": kwargs}
+        item = {"uid": uid, "callback": callback, "keep": keep, "kwargs": kwargs}
 
         self.lock.acquire()
         if self.type_queue == TypeQueue.LIFO:
@@ -179,13 +186,14 @@ class PARThreads(Daemon):
         self._logger.debug("Task %s queued", uid)
         return uid
 
-    def _process_task(self, uid, callback, kwargs):
+    def _process_task(self, uid, callback, keep, kwargs):
         """Create a thread to run a task"""
         data = callback(**kwargs)
 
         self.lock.acquire()
         self._current_task -= 1
-        self._results[uid] = data
+        if keep:
+            self._results[uid] = data
         self.lock.release()
         self._logger.debug("Task %s done. Parallel tasks: %d", uid, self._current_task)
 
