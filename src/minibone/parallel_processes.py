@@ -148,7 +148,7 @@ class PARProcesses(Daemon):
             if resp != "_no_in_dict_" and resp.ready:
                 return resp.get()
 
-            asyncio.sleep(0.01)
+            await asyncio.sleep(0.01)
 
         return None
 

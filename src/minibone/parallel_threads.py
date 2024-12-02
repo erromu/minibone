@@ -147,7 +147,7 @@ class PARThreads(Daemon):
             if resp != "_no_in_dict_":
                 return resp
 
-            asyncio.sleep(0.01)
+            await asyncio.sleep(0.01)
 
         return None
 

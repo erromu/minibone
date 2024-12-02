@@ -4,7 +4,7 @@
 
 [project]
 name = "minibone"
-version = "0.6.2"
+version = "0.7.0"
 description = "Small boiler plate with tools for multithreading."
 keywords = ["multithreading", "task", "job", "background"]
 authors = [
