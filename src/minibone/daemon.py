@@ -53,7 +53,8 @@ class Daemon:
                                 Must be >= 0
 
         sleep       int         Number of seconds to sleep on each interation when iddle.
-                                Must be >= 0.01 and <= 1
+                                Must be >= 0 and <= 1. Set to Zero to do not sleep
+                                Sleep happends after calling on_process/callback
 
         callback    callable    [Optional] A callable object to be called instead of on_process
                                 Default None.
@@ -76,7 +77,7 @@ class Daemon:
         """
         assert not name or isinstance(name, str)
         assert isinstance(interval, (float, int)) and interval >= 0
-        assert isinstance(sleep, (float, int)) and sleep >= 0.01 and sleep <= 1
+        assert isinstance(sleep, (float, int)) and sleep >= 0 and sleep <= 1
         assert not callback or callable(callback)
         assert isinstance(iter, int) and (iter == -1 or iter >= 1)
         assert isinstance(daemon, bool)
@@ -125,7 +126,8 @@ class Daemon:
                     if self._count >= self._iter:
                         return
 
-            time.sleep(self._sleep)
+            if self._sleep > 0:
+                time.sleep(self._sleep)
 
     def start(self):
         """Start running on_process/callback periodically"""

@@ -67,7 +67,7 @@ class PARProcesses(Daemon):
         """
         assert isinstance(type_queue, TypeQueue)
         assert isinstance(daemon, bool)
-        super().__init__(name="PoolThreads", interval=0.01, sleep=0.01, daemon=daemon)
+        super().__init__(name="PoolThreads", interval=0, sleep=0, daemon=daemon)
 
         self._logger = logging.getLogger(__class__.__name__)
 
@@ -191,9 +191,8 @@ class PARProcesses(Daemon):
             self.lock.acquire()
             if item["keep"]:
                 self._processing[item["uid"]] = resp
-            self.lock.release()
-
             self._queue.task_done()
+            self.lock.release()
 
     def stop(self):
         super().stop()

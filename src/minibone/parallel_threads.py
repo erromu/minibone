@@ -71,7 +71,7 @@ class PARThreads(Daemon):
         assert isinstance(type_queue, TypeQueue)
         assert isinstance(max_threads, int) and max_threads > 0
         assert isinstance(daemon, bool)
-        super().__init__(name="PoolThreads", interval=0.01, sleep=0.01, daemon=daemon)
+        super().__init__(name="PoolThreads", interval=0, sleep=0, daemon=daemon)
 
         self._logger = logging.getLogger(__class__.__name__)
 
@@ -201,8 +201,8 @@ class PARThreads(Daemon):
         while len(self._queue) > 0 and self._current_task < self._max_threads:
             self.lock.acquire()
             item = self._queue.popleft()
-            self._logger.debug("Task %s started", item["uid"])
-            task = threading.Thread(target=self._process_task, kwargs=item)
             self._current_task += 1
             self.lock.release()
+            task = threading.Thread(target=self._process_task, kwargs=item)
             task.start()
+            self._logger.debug("Task %s started", item["uid"])
