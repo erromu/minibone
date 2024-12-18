@@ -60,7 +60,14 @@ class PARThreads(Daemon):
      print(res1, res2)
     """
 
-    def __init__(self, type_queue: TypeQueue = TypeQueue.FIFO, max_threads=10, daemon: bool = True):
+    def __init__(
+        self,
+        type_queue: TypeQueue = TypeQueue.FIFO,
+        max_threads=10,
+        interval: int = 0,
+        sleep: int = 0.005,
+        daemon: bool = True,
+    ):
         """
         Arguments
         ---------
@@ -71,7 +78,7 @@ class PARThreads(Daemon):
         assert isinstance(type_queue, TypeQueue)
         assert isinstance(max_threads, int) and max_threads > 0
         assert isinstance(daemon, bool)
-        super().__init__(name="PoolThreads", interval=0, sleep=0, daemon=daemon)
+        super().__init__(name="PoolThreads", interval=interval, sleep=sleep, daemon=daemon)
 
         self._logger = logging.getLogger(__class__.__name__)
 
