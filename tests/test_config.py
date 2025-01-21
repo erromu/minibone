@@ -2,7 +2,7 @@ import asyncio
 import unittest
 from pathlib import Path
 
-from src.minibone.config import Config
+from minibone.config import Config
 
 
 class TestConfig(unittest.TestCase):

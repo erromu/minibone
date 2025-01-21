@@ -2,7 +2,7 @@ import time
 import unittest
 from pathlib import Path
 
-from src.minibone.storing import Storing
+from minibone.storing import Storing
 
 
 class TestStoring(unittest.TestCase):

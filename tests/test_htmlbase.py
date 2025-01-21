@@ -2,7 +2,7 @@ import asyncio
 import unittest
 from pathlib import Path
 
-from src.minibone.html_base import HTMLBase
+from minibone.html_base import HTMLBase
 
 
 class TestHTMLBase(unittest.TestCase):

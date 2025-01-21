@@ -163,7 +163,7 @@ class PARProcesses(Daemon):
         cmd:        str     Any command to prefix the UID to return
         keep:       bool    Set to True to keep the callback's result in memory
                             Set to False to forget it. Usefull for callbacks that returns nothing
-        kwargs:     dict    a dick with key/value parameters
+        kwargs:     dict    a dict with key/value parameters
 
         Notes
         -----
