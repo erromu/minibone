@@ -161,6 +161,9 @@ class HTTPt:
         assert not params or isinstance(params, dict)
         self._logger.debug("_get %s", url)
 
+        if not params:
+            params= dict()
+
         resp = None
         try:
             r = self.fetcher.get(url, timeout=self._timeout, verify=False, **params)
@@ -186,6 +189,9 @@ class HTTPt:
         assert not payload or isinstance(payload, dict)
         assert isinstance(is_json, bool)
         self._logger.debug("_post %s %s is_json %s", url, payload, is_json)
+
+        if not payload:
+            payload = dict()
 
         resp = None
         try:
