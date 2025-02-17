@@ -77,7 +77,7 @@ class Storing(Daemon):
 
         item = {"format": FORMAT.JSON, "path": path, "file": filename, "data": data}
         self._queue.append(item)
-        self._logger.info("{}/{} aded to queue".format(path, filename))
+        self._logger.info("{}/{} added to queue".format(path, filename))
 
     def on_process(self):
         if len(self._queue) == 0:

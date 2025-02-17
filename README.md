@@ -60,15 +60,17 @@ class MyConfig(Config):
         settings = Config.from_toml(filepath="config.toml", defaults=defaults)
         super().__init__(settings=settings)
 
+    @property
     def listen(self) -> str:
         return self["main"]["listen"]
 
+    @property
     def port(self) -> int:
         return self["main"]["port"]
 
 if __name__ == "__main__":
     cfg = MyConfig()
-    print(cfg.port())
+    print(cfg.port)
     # it will print the default port value if not port setting was defined in config.toml
 
 ```
@@ -114,10 +116,10 @@ from minibone.logging import setup_log
 if __name__ == "__main__":
 
     # setup_log must be called only once in your code.
-    # So you have to choice if logging to stderr or to a file when calling it
+    # So you have to choice if logging to stdin or to a file when calling it
 
     setup_log(level="INFO")
-    logging.info('This is a log to the stderr')
+    logging.info('This is a log to the stdin')
 
     # or call the next lines instead if you want to log into a file
     # setup_log(file="sample.log", level="INFO")

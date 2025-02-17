@@ -10,6 +10,7 @@ class TestConfig(unittest.TestCase):
         settings = {"setting1": "value1", "setting2": 2, "setting3": True}
         cfg = Config(settings=settings, filepath=None)
 
+        self.assertEqual(cfg.sha1, "f8b312b90657dbef8a72ece9ab687921c0200a26")
         self.assertEqual(cfg.get("setting1", None), "value1")
         self.assertEqual(cfg.get("setting10", None), None)
         self.assertEqual(cfg.get("setting2", None), 2)

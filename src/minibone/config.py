@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import re
@@ -256,6 +257,11 @@ class Config(dict):
 
         for key, value in settings.items():
             self.add(key, value)
+
+    @property
+    def sha1(self):
+        """Return the sha1 hash value for current config settings"""
+        return hashlib.sha1(bytes(str(self.copy()), "utf-8")).hexdigest()
 
     def _tofile(self, format: FORMAT):
         """Save settings to file in format
