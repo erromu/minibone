@@ -48,7 +48,7 @@ class PARThreads(Daemon):
      t = PARThreads()
      t.start()
 
-     # tasks will be run on its own CPU process
+     # tasks will be run on its own thread
      uid1 = t.queue(reporter, message="Say")
      uid2 = t.queue(reporter, message="something")
 
