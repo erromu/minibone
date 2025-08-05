@@ -11,7 +11,7 @@ minibone is an easy to use yet powerful boiler plate for multithreading, multipr
 - __HTTPt__: HTTP client to do parallel request in threads
 - __Logging__: To setup a logger friendly with filerotation 
 - __PARProcesses__: To run parallel tasks as processes
-- __PARThreads__: To run parallel tasks in threads 
+- __PARThreads__: To run concurrent tasks in threads 
 - __Storing__: To queue and store files periodically in a thread (queue and forget)
 
 It will be deployed to PyPi when a new release is created
