@@ -69,7 +69,7 @@ class PARProcesses(Daemon):
         """
         assert isinstance(type_queue, TypeQueue)
         assert isinstance(daemon, bool)
-        super().__init__(name="PoolThreads", interval=interval, sleep=sleep, daemon=daemon)
+        super().__init__(name="Poolprocesses", interval=interval, sleep=sleep, daemon=daemon)
 
         self._logger = logging.getLogger(__class__.__name__)
 
