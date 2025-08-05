@@ -72,7 +72,7 @@ class PARThreads(Daemon):
         Arguments
         ---------
         type_queue:     TypeQueue       Type of queue desired (FIFO / LIFO)
-        max_threads:    int             Maximum number of threads to run in parallel
+        max_threads:    int             Maximum number of concurrency threads to run
         daemon:         bool            True to run as a daemon, False otherwise
         """
         assert isinstance(type_queue, TypeQueue)
