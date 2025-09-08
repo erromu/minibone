@@ -32,7 +32,7 @@ class PARProcesses:
         ...     return x ** y
         ...
         >>> async def main():
-        ...     mgr = ProcessPoolManager()
+        ...     mgr = PARProcesses()
         ...     tid = mgr.submit(mypow, 2, 8)
         ...     result = await mgr.aresult(tid)
         ...     print(result)
