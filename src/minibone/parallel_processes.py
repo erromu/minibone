@@ -4,10 +4,19 @@ import queue
 import random
 import signal
 import time
+import warnings
 from enum import Enum
 from multiprocessing import Pool
 
 from minibone.daemon import Daemon
+
+
+warnings.warn(
+    "minibone.parallel_processes is deprecated and will be removed in a future release. "
+    "Please use minibone.processes instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 class TypeQueue(Enum):
@@ -67,6 +76,12 @@ class PARProcesses(Daemon):
         type_queue:     TypeQueue       Type of queue desired (FIFO, LIFO)
         daemon:         bool            True to run as a daemon, False otherwise
         """
+        warnings.warn(
+            "PARProcesses is deprecated and will be removed in a future release. "
+            "Please use ProcessPoolManager from minibone.processes instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         assert isinstance(type_queue, TypeQueue)
         assert isinstance(daemon, bool)
         super().__init__(name="Poolprocesses", interval=interval, sleep=sleep, daemon=daemon)

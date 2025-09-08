@@ -4,14 +4,14 @@
 
 [project]
 name = "minibone"
-version = "0.7.5"
+version = "0.8.0"
 description = "Small boiler plate with tools for multithreading."
 keywords = ["multithreading", "task", "job", "background"]
 authors = [
     {name = "Erick Romero", email = "erick@gjrlabs.com"}
 ]
-license = {file = "LICENSE"}
 readme = "README.md"
+license-files = ["LICEN[CS]E*"]
 
 # https://pypi.org/classifiers/
 classifiers = [
@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Utilities",
     "Topic :: Software Development :: Libraries",
 ]
-requires-python = ">=3.0"
+requires-python = ">=3.10"
 dependencies = ["aiofiles", "pyyaml", "requests", "tomlkit"]
 
 [project.urls]
@@ -33,12 +33,81 @@ dependencies = ["aiofiles", "pyyaml", "requests", "tomlkit"]
 "Repository" = "https://github.com/erromu/minibone.git"
 #"Changelog" = ""
 
+#####################################################
+# 1. setuptools editable install + import root
+#####################################################
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+#####################################################
+# 2. Ruff (linter + formatter + isort)
+#####################################################
 [tool.ruff]
-# Set the maximum line length to 79.
 line-length = 120
+target-version = "py310"
+src = ["src"]
 
 [tool.ruff.lint]
-# Add the `line-too-long` rule to the enforced rule set. By default, Ruff omits rules that
-# overlap with the use of a formatter, like Black, but we can override this behavior by
-# explicitly adding the rule.
-extend-select = ["E501"]
+select = [
+    "ARG",  # Unused function arguments
+    "B",    # Bugbear (likely bugs and design issues)
+    "E",    # Pycodestyle errors (PEP 8 style violations)
+    "F",    # Pyflakes (logical errors, unused imports/variables)
+    "I",    # Import sorting (isort)
+    "N",    # pep8-naming (naming conventions)
+    "PTH",  # Pathlib usage (prefer pathlib over os.path)
+    "PL",   # Pylint (various code quality checks)
+    "SIM",  # Code simplification suggestions
+    "TCH",  # Type checking (type annotation issues)
+    "UP",   # pyupgrade (outdated syntax, suggest modern Python)
+    "W",    # Pycodestyle warnings (less severe than E)
+]
+ignore = [
+    "E203",     # Whitespace before ':' (conflicts with Black formatter)
+    "E501",     # let the formatter handle line length
+    "PLR0913",  # Too many arguments in function definition
+]
+
+[tool.ruff.lint.isort]
+known-first-party      = ["src"]        # treat anything under src/ as first-party
+
+# --- layout tweaks ---
+lines-after-imports    = 2              # one blank line after the last import
+lines-between-types    = 0              # no extra blank line between 'import x' and 'from x import y'
+
+# --- ordering rules ---
+order-by-type          = true           # CONST, Class, var (default)
+case-sensitive         = false          # case-insensitive alphabetical (default)
+
+# --- force special cases ---
+force-to-top           = ["__future__"] # keep future imports at the very top
+combine-as-imports     = false          # uncomment if you want separate lines for `from x import y as z`
+
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_ignores = true
+disallow_any_generics = true
+exclude = ["docs/"]
+
+[tool.pytest.ini_options]
+addopts = ["-q", "--strict-markers", "--tb=short"]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files   = ["test_*.py", "*_test.py"]
+xfail_strict = true
+
+[tool.coverage.run]
+branch = true
+source = ["src/"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
