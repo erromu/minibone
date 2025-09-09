@@ -64,7 +64,7 @@ class HTMLBase:
             snippets_dir = Path(self._snippets_path)
             files = snippets_dir.glob(f"*.{self._ext}")
             for file in files:
-                name = file.split("/")[-1].split(".")[0]
+                name = Path(file).stem
                 content = await self._aiofile(file)
                 if content:
                     self._snippets[name] = content
