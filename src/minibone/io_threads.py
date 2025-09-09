@@ -1,0 +1,275 @@
+import asyncio
+import logging
+import uuid
+from collections.abc import Callable
+from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, TimeoutError
+from threading import Lock
+from typing import Any
+
+
+class PARIOThreads:
+    """
+    Async manager for concurrent IO-bound tasks using ThreadPoolExecutor.
+
+    This class provides a simple interface for submitting, tracking, and retrieving results
+    from IO-bound tasks executed in concurrent threads. It is designed for use with
+    file operations, network requests, and other IO-bound operations.
+
+    Best Practices:
+      - Use for IO-bound tasks (file operations, network requests, etc.)
+      - For CPU-bound tasks, use PARProcesses instead
+      - Call `ashutdown()` or `shutdown()` to cleanly close the thread pool when done.
+      - Use `cleanup()` to remove completed tasks and free memory.
+
+    Example:
+        >>> import asyncio
+        >>> from minibone.io_threads import PARIOThreads
+        >>>
+        >>> def read_file(filename):
+        ...     with open(filename, 'r') as f:
+        ...         return f.read()
+        ...
+        >>> async def main():
+        ...     mgr = PARIOThreads()
+        ...     tid = mgr.submit(read_file, 'example.txt')
+        ...     result = await mgr.aresult(tid)
+        ...     print(result)
+        ...     await mgr.ashutdown()
+        >>>
+        >>> asyncio.run(main())
+    """
+
+    def __init__(self, max_workers: int | None = None):
+        """
+        Initialize the thread pool manager.
+
+        Args:
+            max_workers (int, optional): Maximum number of worker threads.
+        """
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self._executor = ThreadPoolExecutor(max_workers=max_workers)
+        self._futures: dict[str, Future] = {}
+        self.lock = Lock()
+        self._shutdown = False  # Track shutdown state
+
+    def submit(self, fn: Callable, *args, **kwargs) -> str:
+        """
+        Submit a task to the thread pool and return a unique task ID.
+
+        Args:
+            fn (Callable): The function to execute in a separate thread.
+            *args: Positional arguments for the function.
+            **kwargs: Keyword arguments for the function.
+
+        Returns:
+            str: A unique task ID.
+        """
+        if self._shutdown:
+            raise RuntimeError("Cannot submit new tasks after shutdown.")
+        task_id = str(uuid.uuid4())
+        future = self._executor.submit(fn, *args, **kwargs)
+        with self.lock:
+            self._futures[task_id] = future
+        self._logger.debug(f"Task {task_id} submitted")
+        return task_id
+
+    def result(self, task_id: str, timeout: float | None = None, cleanup: bool = True) -> Any:
+        """
+        Get the result of a task by its ID (blocking, synchronous).
+        By default, cleans up the future after retrieval (result cannot be retrieved again).
+
+        Args:
+            task_id (str): The task ID.
+            timeout (float, optional): Seconds to wait for result.
+            cleanup (bool): If True (default), remove the task after retrieval.
+
+        Returns:
+            Any: The result of the task.
+
+        Raises:
+            TimeoutError: if the result is not ready in time
+            CancelledError: if the task was cancelled
+            Exception: if the task raised an exception
+
+        Note:
+            After calling this method with cleanup=True, the result cannot be retrieved again.
+        """
+        with self.lock:
+            future = self._futures.get(task_id)
+        if not future:
+            raise KeyError(f"No such task: {task_id}")
+        try:
+            result = future.result(timeout)
+        except TimeoutError:
+            self._logger.warning(f"Task {task_id} timed out")
+            raise
+        except CancelledError:
+            self._logger.warning(f"Task {task_id} was cancelled")
+            raise
+        except Exception as e:
+            self._logger.error(f"Task {task_id} raised exception: {e}")
+            raise
+        finally:
+            if cleanup:
+                with self.lock:
+                    self._futures.pop(task_id, None)
+        return result
+
+    async def aresult(self, task_id: str, timeout: float | None = None, cleanup: bool = True) -> Any:
+        """
+        Get the result of a task by its ID (async, non-blocking).
+        By default, cleans up the future after retrieval (result cannot be retrieved again).
+
+        Args:
+            task_id (str): The task ID.
+            timeout (float, optional): Seconds to wait for result.
+            cleanup (bool): If True (default), remove the task after retrieval.
+
+        Returns:
+            Any: The result of the task.
+
+        Raises:
+            TimeoutError: if the result is not ready in time
+            CancelledError: if the task was cancelled
+            Exception: if the task raised an exception
+
+        Note:
+            After calling this method with cleanup=True, the result cannot be retrieved again.
+        """
+        loop = asyncio.get_running_loop()
+        with self.lock:
+            future = self._futures.get(task_id)
+        if not future:
+            raise KeyError(f"No such task: {task_id}")
+        try:
+            result = await loop.run_in_executor(None, future.result, timeout)
+        except TimeoutError:
+            self._logger.warning(f"Task {task_id} timed out")
+            raise
+        except CancelledError:
+            self._logger.warning(f"Task {task_id} was cancelled")
+            raise
+        except Exception as e:
+            self._logger.error(f"Task {task_id} raised exception: {e}")
+            raise
+        finally:
+            if cleanup:
+                with self.lock:
+                    self._futures.pop(task_id, None)
+        return result
+
+    def wait_all(self, cleanup: bool = True) -> dict[str, Any]:
+        """
+        Wait for all tasks to complete and return their results as a dict (blocking, synchronous).
+        By default, cleans up all completed tasks.
+
+        Args:
+            cleanup (bool): If True (default), remove all completed tasks after retrieval.
+
+        Returns:
+            dict[str, Any]: Mapping of task IDs to results or exceptions.
+
+        Note:
+            If a task raises an exception, the exception object is stored in the results dict.
+        """
+        with self.lock:
+            futures = self._futures.copy()
+        results = {}
+        for task_id, future in futures.items():
+            try:
+                results[task_id] = future.result()
+            except Exception as e:
+                results[task_id] = e
+        if cleanup:
+            self.cleanup()
+        return results
+
+    async def await_all(self, cleanup: bool = True) -> dict[str, Any]:
+        """
+        Async wait for all tasks to complete and return their results as a dict.
+        By default, cleans up all completed tasks.
+
+        Args:
+            cleanup (bool): If True (default), remove all completed tasks after retrieval.
+
+        Returns:
+            dict[str, Any]: Mapping of task IDs to results or exceptions.
+
+        Note:
+            If a task raises an exception, the exception object is stored in the results dict.
+        """
+        loop = asyncio.get_running_loop()
+        with self.lock:
+            futures = self._futures.copy()
+        results = {}
+        for task_id, future in futures.items():
+            try:
+                results[task_id] = await loop.run_in_executor(None, future.result)
+            except Exception as e:
+                results[task_id] = e
+        if cleanup:
+            self.cleanup()
+        return results
+
+    def shutdown(self, wait: bool = True):
+        """
+        Synchronously shut down the thread pool.
+
+        Args:
+            wait (bool): If True, wait for all running tasks to finish.
+        """
+        if self._shutdown:
+            self._logger.warning("Thread pool already shut down")
+            return
+        self._executor.shutdown(wait)
+        self._shutdown = True
+        self._logger.debug("Thread pool shut down")
+
+    async def ashutdown(self, wait: bool = True):
+        """
+        Async shutdown of the thread pool.
+
+        Args:
+            wait (bool): If True, wait for all running tasks to finish.
+        """
+        if self._shutdown:
+            self._logger.warning("Thread pool already shut down")
+            return
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._executor.shutdown, wait)
+        self._shutdown = True
+        self._logger.debug("Thread pool shut down")
+
+    def status(self, task_id: str) -> str:
+        """
+        Get the status of a task.
+
+        Args:
+            task_id (str): The task ID.
+
+        Returns:
+            str: "unknown", "cancelled", "running", "exception", "done", or "pending"
+        """
+        with self.lock:
+            future = self._futures.get(task_id)
+        if not future:
+            return "unknown"
+        if future.cancelled():
+            return "cancelled"
+        if future.running():
+            return "running"
+        if future.done():
+            if future.exception():
+                return "exception"
+            return "done"
+        return "pending"
+
+    def cleanup(self):
+        """
+        Remove all completed tasks from the futures dictionary.
+        """
+        with self.lock:
+            done_keys = [k for k, f in self._futures.items() if f.done()]
+            for k in done_keys:
+                self._futures.pop(k, None)
+        self._logger.debug(f"Cleaned up {len(done_keys)} completed tasks.")
