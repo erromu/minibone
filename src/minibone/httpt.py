@@ -162,13 +162,17 @@ class HTTPt:
         self._logger.debug("_get %s", url)
 
         if not params:
-            params= dict()
+            params = dict()
 
         resp = None
         try:
-            r = self.fetcher.get(url, timeout=self._timeout, verify=False, **params)
+            r = self.fetcher.get(url, timeout=self._timeout, verify=False, params=params)
             if r.status_code == 200:
-                resp = r.text
+                # Try to parse as JSON first, fall back to text
+                try:
+                    resp = r.json()
+                except (requests.exceptions.JSONDecodeError, ValueError):
+                    resp = r.text
             else:
                 self._logger.warning("Got %s for %s", r.status_code, url)
             r.close()

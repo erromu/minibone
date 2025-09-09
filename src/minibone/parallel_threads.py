@@ -100,7 +100,7 @@ class PARThreads(Daemon):
         cmd:    str     String to prefix UID
         """
         assert isinstance(cmd, str)
-        return "{}{}_{}".format(cmd, self._letters[random.randint(0, len(self._letters) - 1)], time.time())
+        return f"{cmd}{self._letters[random.randint(0, len(self._letters) - 1)]}_{time.time()}"
 
     def _lookfor_result(self, uid: str) -> object:
         """Search for a result"""
@@ -120,9 +120,9 @@ class PARThreads(Daemon):
                             Set to zero or negative to wait forever
         """
         assert isinstance(uid, str)
-        assert isinstance(timeout, (int, float))
+        assert isinstance(timeout, int | float)
 
-        notimeout = True if timeout <= 0 else False
+        notimeout = timeout <= 0
         epoch = time.time()
         future_epoch = time.time() + timeout
         while notimeout or epoch < future_epoch:
@@ -144,9 +144,9 @@ class PARThreads(Daemon):
                             Set to zero or negative to wait forever
         """
         assert isinstance(uid, str)
-        assert isinstance(timeout, (int, float))
+        assert isinstance(timeout, int | float)
 
-        notimeout = True if timeout <= 0 else False
+        notimeout = timeout <= 0
         epoch = time.time()
         future_epoch = time.time() + timeout
         while notimeout or epoch < future_epoch:
