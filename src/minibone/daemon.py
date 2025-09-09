@@ -76,8 +76,8 @@ class Daemon:
         Set to 0.01 if on_process is high priority
         """
         assert not name or isinstance(name, str)
-        assert isinstance(interval, (float, int)) and interval >= 0
-        assert isinstance(sleep, (float, int)) and sleep >= 0 and sleep <= 1
+        assert isinstance(interval, float | int) and interval >= 0
+        assert isinstance(sleep, float | int) and sleep >= 0 and sleep <= 1
         assert not callback or callable(callback)
         assert isinstance(iter, int) and (iter == -1 or iter >= 1)
         assert isinstance(daemon, bool)

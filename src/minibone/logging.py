@@ -12,7 +12,7 @@ def setup_log(file: str = None, level: str | int = logging.INFO):
     level:  str     The log level. [DEBUG, INFO, WARNING, ERROR, CRITICAL]
     """
     assert not file or isinstance(file, str)
-    assert isinstance(level, (int, str))
+    assert isinstance(level, int | str)
 
     format = "%(asctime)s UTC [%(levelname)s] %(name)s: %(message)s"
     datefmt = "%Y-%m-%d %H:%M:%S"

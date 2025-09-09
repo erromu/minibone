@@ -70,10 +70,12 @@ class HTTPt:
 
         # TODO take a look to https://netnut.io/httpx-vs-requests
         self.fetcher = requests.Session()
-        self.fetcher.headers.update({
-            "User-Agent": "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            "X-Forwarded-For": "'\"\\--",
-        })
+        self.fetcher.headers.update(
+            {
+                "User-Agent": "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                "X-Forwarded-For": "'\"\\--",
+            }
+        )
 
     def _queue_request(self, verb: Verbs, url: str, cmd: str = "UID", **kwargs) -> str:
         """Add a request to the queue and return an UID to retrieve the response whit read_resp
@@ -167,7 +169,7 @@ class HTTPt:
         resp = None
         try:
             r = self.fetcher.get(url, timeout=self._timeout, verify=False, params=params)
-            if r.status_code == 200:
+            if r.status_code == requests.status_codes.codes.ok:
                 # Try to parse as JSON first, fall back to text
                 try:
                     resp = r.json()
@@ -200,11 +202,8 @@ class HTTPt:
         resp = None
         try:
             r = self.fetcher.post(url, data=payload, timeout=self._timeout, verify=False)
-            if r.status_code == 200 and not r.is_permanent_redirect and not r.is_redirect:
-                if is_json:
-                    resp = r.json()
-                else:
-                    resp = r.text
+            if r.status_code == requests.status_codes.codes.ok and not r.is_permanent_redirect and not r.is_redirect:
+                resp = r.json() if is_json else r.text
             else:
                 self._logger.warning("Got %s or redirect for %s", r.status_code, url)
 

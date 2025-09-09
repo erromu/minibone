@@ -19,19 +19,19 @@ class TestHTMLBase(unittest.TestCase):
         title = 'HTMLBase'
 
         [account]
-        user = 'John'        
+        user = 'John'
         """
 
-        with open("./snippets/account.html", "tw") as f:
+        with Path.open("./snippets/account.html", "w") as f:
             f.write(snippet)
 
-        with open("./snippets/account.txt", "tw") as f:
+        with Path.open("./snippets/account.txt", "w") as f:
             f.write(snippet)
 
-        with open("./index.html", "tw") as f:
+        with Path.open("./index.html", "w") as f:
             f.write(html)
 
-        with open("./index.toml", "tw") as f:
+        with Path.open("./index.toml", "w") as f:
             f.write(toml)
 
         htmlbase = HTMLBase(snippets_path="./snippets")

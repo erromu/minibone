@@ -35,8 +35,8 @@ class Config(dict):
         data = None
 
         try:
-            file = "{path}".format(path=filepath)
-            with open(file, "rt", encoding="utf-8") as f:
+            file = f"{filepath}"
+            with Path.open(file, encoding="utf-8") as f:
                 if format == FORMAT.TOML:
                     data = tomlkit.load(f)
                 elif format == FORMAT.YAML:
@@ -65,8 +65,8 @@ class Config(dict):
         data = None
 
         try:
-            file = "{path}".format(path=filepath)
-            async with aiofiles.open(file, "rt", encoding="utf-8") as f:
+            file = f"{filepath}"
+            async with aiofiles.open(file, encoding="utf-8") as f:
                 if format == FORMAT.TOML:
                     data = tomlkit.loads(await f.read())
                 elif format == FORMAT.YAML:
@@ -188,7 +188,7 @@ class Config(dict):
         """
         assert isinstance(format, FORMAT)
         assert isinstance(filepath, str) and len(filepath) > 0
-        assert isinstance(data, (dict, list))
+        assert isinstance(data, dict | list)
 
         try:
             file = Path(filepath)
@@ -196,7 +196,7 @@ class Config(dict):
             if parent and not parent.exists():
                 parent.mkdir(exist_ok=True, parents=True)
 
-            with open(filepath, "wt", encoding="utf-8") as f:
+            with Path.open(filepath, "w", encoding="utf-8") as f:
                 if format == FORMAT.TOML:
                     tomlkit.dump(data, f)
                 elif format == FORMAT.YAML:
@@ -218,7 +218,7 @@ class Config(dict):
         """
         assert isinstance(format, FORMAT)
         assert isinstance(filepath, str) and len(filepath) > 0
-        assert isinstance(data, (dict, list))
+        assert isinstance(data, dict | list)
 
         try:
             file = Path(filepath)
@@ -226,7 +226,7 @@ class Config(dict):
             if parent and not parent.exists():
                 parent.mkdir(exist_ok=True, parents=True)
 
-            async with aiofiles.open(filepath, "wt", encoding="utf-8") as f:
+            async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
                 if format == FORMAT.TOML:
                     await f.write(tomlkit.dumps(data))
                 elif format == FORMAT.YAML:
@@ -238,7 +238,7 @@ class Config(dict):
             logger = logging.getLogger(__class__.__name__)
             logger.error("aioto_file %s error %s. %s", format.value, filepath, e)
 
-    def __init__(self, settings: dict = {}, filepath: str = None):
+    def __init__(self, settings: dict = None, filepath: str = None):
         """
         Arguments
         ---------
@@ -249,6 +249,8 @@ class Config(dict):
 
         filepath:   str     Full filepath of the file to store settings in
         """
+        if settings is None:
+            settings = {}
         assert isinstance(settings, dict)
         assert not filepath or isinstance(filepath, str)
         self._logger = logging.getLogger(__class__.__name__)
@@ -327,8 +329,8 @@ class Config(dict):
         value   object      Value of the setting.  The only allowed values are:
                             str, int, float, list, dict, bool, datetime, date, time
         """
-        assert isinstance(key, str) and re.match("[a-z]\w", key)
-        assert isinstance(value, (str, int, float, list, dict, bool, datetime, date, time))
+        assert isinstance(key, str) and re.match(r"[a-z]\w", key)
+        assert isinstance(value, str | int | float | list | dict | bool | datetime | date | time)
 
         self[key] = value
 

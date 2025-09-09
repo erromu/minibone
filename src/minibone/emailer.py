@@ -1,6 +1,6 @@
-import email.utils as utils
 import logging
 import smtplib
+from email import utils
 from email.message import EmailMessage
 
 from minibone.daemon import Daemon
@@ -117,12 +117,12 @@ class Emailer(Daemon):
         replyto:        str     Addres to get reply if diferrent from from_address
         """
         assert isinstance(from_address, str)
-        assert isinstance(to, (str, list))
+        assert isinstance(to, str | list)
         assert isinstance(subject, str)
         assert not content_txt or isinstance(content_txt, str)
         assert not content_html or isinstance(content_html, str)
-        assert not cc or isinstance(cc, (str, list))
-        assert not bcc or isinstance(bcc, (str, list))
+        assert not cc or isinstance(cc, str | list)
+        assert not bcc or isinstance(bcc, str | list)
         assert not replyto or isinstance(replyto, str)
 
         if isinstance(to, str):
@@ -162,16 +162,18 @@ class Emailer(Daemon):
         # optional-field)
 
         self.lock.acquire()
-        self._queue.append({
-            "from": from_address,
-            "to": to,
-            "subject": subject,
-            "text": content_txt,
-            "html": content_html,
-            "cc": cc,
-            "bcc": bcc,
-            "replyto": replyto,
-        })
+        self._queue.append(
+            {
+                "from": from_address,
+                "to": to,
+                "subject": subject,
+                "text": content_txt,
+                "html": content_html,
+                "cc": cc,
+                "bcc": bcc,
+                "replyto": replyto,
+            }
+        )
         self.lock.release()
 
     def on_process(self):

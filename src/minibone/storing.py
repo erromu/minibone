@@ -73,17 +73,17 @@ class Storing(Daemon):
         """
         assert isinstance(path, str)
         assert isinstance(filename, str)
-        assert isinstance(data, (dict, list))
+        assert isinstance(data, dict | list)
 
         item = {"format": FORMAT.JSON, "path": path, "file": filename, "data": data}
         self._queue.append(item)
-        self._logger.info("{}/{} added to queue".format(path, filename))
+        self._logger.info(f"{path}/{filename} added to queue")
 
     def on_process(self):
         if len(self._queue) == 0:
             return
 
-        for i in range(min(len(self._queue), self._chunks)):
+        for _ in range(min(len(self._queue), self._chunks)):
             d = self._queue.popleft()
             filepath = "{}/{}".format(d["path"], d["file"])
             Config.to_file(format=FORMAT.JSON, filepath=filepath, data=d["data"])
