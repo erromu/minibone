@@ -144,22 +144,25 @@ class PARProcesses:
             future = self._futures.get(task_id)
         if not future:
             raise KeyError(f"No such task: {task_id}")
+
+        def _get():  # ← no timeout here
+            return future.result()
+
         try:
-            result = await loop.run_in_executor(None, future.result, timeout)
-        except TimeoutError:
+            return await asyncio.wait_for(
+                loop.run_in_executor(None, _get),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:  # ← async-side timeout
             self._logger.warning(f"Task {task_id} timed out")
             raise
-        except CancelledError:
-            self._logger.warning(f"Task {task_id} was cancelled")
-            raise
-        except Exception as e:
+        except Exception as e:  # ← worker’s exception
             self._logger.error(f"Task {task_id} raised exception: {e}")
             raise
         finally:
             if cleanup:
                 with self.lock:
                     self._futures.pop(task_id, None)
-        return result
 
     def wait_all(self, cleanup: bool = True) -> dict[str, Any]:
         """
