@@ -22,16 +22,16 @@ class TestHTMLBase(unittest.TestCase):
         user = 'John'
         """
 
-        with Path.open("./snippets/account.html", "tw") as f:
+        with open("./snippets/account.html", "w") as f:
             f.write(snippet)
 
-        with Path.open("./snippets/account.txt", "tw") as f:
+        with open("./snippets/account.txt", "w") as f:
             f.write(snippet)
 
-        with Path.open("./index.html", "tw") as f:
+        with open("./index.html", "w") as f:
             f.write(html)
 
-        with Path.open("./index.toml", "tw") as f:
+        with open("./index.toml", "w") as f:
             f.write(toml)
 
         htmlbase = HTMLBase(snippets_path="./snippets")

@@ -2,18 +2,17 @@ import tempfile
 import time
 import unittest
 import uuid
-from pathlib import Path
 
 from minibone.io_threads import PARIOThreads
 
 
 def read_file(filename):
-    with Path.open(filename) as f:
+    with open(filename) as f:
         return f.read()
 
 
 def write_file(filename, content):
-    with Path.open(filename, "w") as f:
+    with open(filename, "w") as f:
         f.write(content)
     return f"Written {len(content)} characters to {filename}"
 
@@ -181,7 +180,7 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, f"Written {len(content)} characters to {temp_filename}")
 
         # Verify the content was actually written
-        with Path.open(temp_filename) as f:
+        with open(temp_filename) as f:
             written_content = f.read()
         self.assertEqual(written_content, content)
 

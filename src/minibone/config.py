@@ -36,7 +36,7 @@ class Config(dict):
 
         try:
             file = f"{filepath}"
-            with Path.open(file, encoding="utf-8") as f:
+            with open(file, encoding="utf-8") as f:
                 if format == FORMAT.TOML:
                     data = tomlkit.load(f)
                 elif format == FORMAT.YAML:
@@ -196,7 +196,7 @@ class Config(dict):
             if parent and not parent.exists():
                 parent.mkdir(exist_ok=True, parents=True)
 
-            with Path.open(filepath, "w", encoding="utf-8") as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 if format == FORMAT.TOML:
                     tomlkit.dump(data, f)
                 elif format == FORMAT.YAML:
