@@ -92,6 +92,8 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
         for i in range(3):
             with tempfile.NamedTemporaryFile(mode="w+", delete=False) as f:
                 f.write(f"Data {i}")
+                # for some reason, it skips to save the temp-file when not sleep
+                time.sleep(0.5)
                 temp_files.append(f.name)
                 tid = mgr.submit(read_file, f.name)
                 tids.append(tid)

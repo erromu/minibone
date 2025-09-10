@@ -1,3 +1,4 @@
+import glob
 import logging
 import time
 from pathlib import Path
@@ -61,10 +62,9 @@ class HTMLBase:
 
         p = Path(self._snippets_path)
         if p.exists() and p.is_dir():
-            snippets_dir = Path(self._snippets_path)
-            files = snippets_dir.glob(f"*.{self._ext}")
+            files = glob.glob(glob.escape(self._snippets_path) + f"/*.{self._ext}")
             for file in files:
-                name = Path(file).stem
+                name = file.split("/")[-1].split(".")[0]
                 content = await self._aiofile(file)
                 if content:
                     self._snippets[name] = content
