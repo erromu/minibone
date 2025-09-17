@@ -2,7 +2,8 @@ import json
 import logging
 from collections import deque
 
-from minibone.config import FORMAT, Config
+from minibone.config import FORMAT
+from minibone.config import Config
 from minibone.daemon import Daemon
 
 
