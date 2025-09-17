@@ -10,7 +10,7 @@ from threading import Lock
 from typing import Any
 
 
-class PARIOThreads:
+class IOThreads:
     """
     Async manager for concurrent IO-bound tasks using ThreadPoolExecutor.
 
@@ -26,14 +26,14 @@ class PARIOThreads:
 
     Example:
         >>> import asyncio
-        >>> from minibone.io_threads import PARIOThreads
+        >>> from minibone.io_threads import IOThreads
         >>>
         >>> def read_file(filename):
         ...     with open(filename, 'r') as f:
         ...         return f.read()
         ...
         >>> async def main():
-        ...     mgr = PARIOThreads()
+        ...     mgr = IOThreads()
         ...     tid = mgr.submit(read_file, 'example.txt')
         ...     result = await mgr.aresult(tid)
         ...     print(result)
