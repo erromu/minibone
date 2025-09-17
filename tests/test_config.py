@@ -3,7 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from minibone.config import FORMAT, Config
+from minibone.config import FORMAT
+from minibone.config import Config
 
 
 class TestConfig(unittest.TestCase):

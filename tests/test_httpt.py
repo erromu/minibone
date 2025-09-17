@@ -4,7 +4,8 @@ from unittest.mock import patch
 
 import httpx
 
-from minibone.httpt import HTTPt, Verbs
+from minibone.httpt import HTTPt
+from minibone.httpt import Verbs
 from minibone.io_threads import PARIOThreads
 
 
