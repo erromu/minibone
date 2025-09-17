@@ -6,29 +6,35 @@ import uuid
 from minibone.io_threads import PARIOThreads
 
 
-def read_file(filename):
+def read_file(filename: str) -> str:
+    """Read content from a file."""
     with open(filename) as f:
         return f.read()
 
 
-def write_file(filename, content):
+def write_file(filename: str, content: str) -> str:
+    """Write content to a file and return status message."""
     with open(filename, "w") as f:
         f.write(content)
     return f"Written {len(content)} characters to {filename}"
 
 
-def fail_operation(x):
+def fail_operation(x: int) -> None:
+    """Operation that always fails for testing."""
     raise ValueError(f"{x} fail!")
 
 
-def network_simulation(delay):
-    # Simulate network operation
+def network_simulation(delay: float) -> str:
+    """Simulate network operation with delay."""
     time.sleep(delay)
     return f"Network response after {delay} seconds"
 
 
 class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
-    async def test_async_result_and_shutdown(self):
+    """Test cases for PARIOThreads parallel I/O manager."""
+
+    async def test_async_result_and_shutdown(self) -> None:
+        """Test async result retrieval and shutdown."""
         mgr = PARIOThreads()
 
         # Create a temporary file for testing
@@ -41,7 +47,8 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, "Hello, World!")
         await mgr.ashutdown()
 
-    def test_sync_result_and_shutdown(self):
+    def test_sync_result_and_shutdown(self) -> None:
+        """Test synchronous result retrieval and shutdown."""
         mgr = PARIOThreads()
 
         # Create a temporary file for testing
@@ -54,24 +61,26 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, "Test content")
         mgr.shutdown()
 
-    def test_exception_handling(self):
+    def test_exception_handling(self) -> None:
+        """Test exception propagation from worker threads."""
         mgr = PARIOThreads()
         tid = mgr.submit(fail_operation, 1)
         with self.assertRaises(ValueError):
             mgr.result(tid)
         mgr.shutdown()
 
-    async def test_await_all_and_cleanup(self):
+    async def test_await_all_and_cleanup(self) -> None:
+        """Test await_all() with multiple concurrent operations."""
         mgr = PARIOThreads()
 
         # Create temporary files for testing
-        temp_files = []
-        tids = []
+        temp_files: list[str] = []
+        tids: list[str] = []
         for i in range(5):
             with tempfile.NamedTemporaryFile(mode="w+", delete=False) as f:
                 f.write(f"Content {i}")
-                # for some reason, it skips to save the temp-file when not sleep
-                time.sleep(0.5)
+                # Sleep to ensure file is properly saved
+                time.sleep(0.1)
                 temp_files.append(f.name)
                 tid = mgr.submit(read_file, f.name)
                 tids.append(tid)
@@ -82,17 +91,18 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(results[tids[i]], f"Content {i}")
         await mgr.ashutdown()
 
-    def test_wait_all_and_cleanup(self):
+    def test_wait_all_and_cleanup(self) -> None:
+        """Test wait_all() with multiple operations."""
         mgr = PARIOThreads()
 
         # Create temporary files for testing
-        temp_files = []
-        tids = []
+        temp_files: list[str] = []
+        tids: list[str] = []
         for i in range(3):
             with tempfile.NamedTemporaryFile(mode="w+", delete=False) as f:
                 f.write(f"Data {i}")
-                # for some reason, it skips to save the temp-file when not sleep
-                time.sleep(0.5)
+                # Sleep to ensure file is properly saved
+                time.sleep(0.1)
                 temp_files.append(f.name)
                 tid = mgr.submit(read_file, f.name)
                 tids.append(tid)
@@ -102,7 +112,8 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(results[tids[i]], f"Data {i}")
         mgr.shutdown()
 
-    def test_cleanup(self):
+    def test_cleanup(self) -> None:
+        """Test cleanup functionality."""
         mgr = PARIOThreads()
 
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as f:
@@ -116,7 +127,8 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mgr.status(tid), "unknown")
         mgr.shutdown()
 
-    def test_status_states(self):
+    def test_status_states(self) -> None:
+        """Test various task status states."""
         mgr = PARIOThreads()
         tid1 = mgr.submit(network_simulation, 0.1)
         status1 = mgr.status(tid1)
@@ -129,18 +141,14 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mgr.status(tid2), "exception")
         mgr.shutdown()
 
-    async def test_aresult_error_cases(self):
+    async def test_aresult_error_cases(self) -> None:
+        """Test error cases for aresult()."""
         mgr = PARIOThreads()
 
         # Test KeyError for invalid task ID
         invalid_tid = str(uuid.uuid4())
         with self.assertRaises(KeyError):
             await mgr.aresult(invalid_tid)
-
-        # Test TimeoutError
-        # tid = mgr.submit(network_simulation, 0.15)
-        # with self.assertRaises(TimeoutError):
-        #     await mgr.aresult(tid, timeout=0.1)
 
         # Test exception propagation
         tid = mgr.submit(fail_operation, 2)
@@ -149,7 +157,8 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
 
         await mgr.ashutdown()
 
-    async def test_ashutdown(self):
+    async def test_ashutdown(self) -> None:
+        """Test async shutdown behavior."""
         mgr = PARIOThreads()
 
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as f:
@@ -168,7 +177,8 @@ class TestPARIOThreads(unittest.IsolatedAsyncioTestCase):
         # Verify shutdown state
         self.assertTrue(mgr._shutdown)
 
-    def test_write_operation(self):
+    def test_write_operation(self) -> None:
+        """Test write file operation."""
         mgr = PARIOThreads()
 
         with tempfile.NamedTemporaryFile(delete=False) as f:

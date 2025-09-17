@@ -43,17 +43,22 @@ class PARProcesses:
     """
 
     def __init__(self, max_workers: int | None = None):
-        """
-        Initialize the process pool manager.
+        """Initialize the process pool manager.
 
         Args:
-            max_workers (int, optional): Maximum number of worker processes.
+            max_workers: Maximum number of worker processes. If None, uses default.
+                        Must be >= 1 if specified.
+
+        Raises:
+            ValueError: If max_workers is less than 1
         """
+        if max_workers is not None and max_workers < 1:
+            raise ValueError("max_workers must be >= 1")
         self._logger = logging.getLogger(self.__class__.__name__)
         self._executor = ProcessPoolExecutor(max_workers=max_workers)
-        self._futures: dict[str, Future] = {}
-        self.lock = Lock()
-        self._shutdown = False  # Track shutdown state
+        self._futures: dict[str, Future] = {}  # Maps task IDs to Future objects
+        self.lock = Lock()  # Protects access to _futures
+        self._shutdown = False  # Whether shutdown has been initiated
 
     def submit(self, fn: Callable, *args, **kwargs) -> str:
         """
@@ -68,12 +73,12 @@ class PARProcesses:
             str: A unique task ID.
         """
         if self._shutdown:
-            raise RuntimeError("Cannot submit new tasks after shutdown.")
+            raise RuntimeError("Cannot submit tasks after shutdown")
         task_id = str(uuid.uuid4())
         future = self._executor.submit(fn, *args, **kwargs)
         with self.lock:
             self._futures[task_id] = future
-        self._logger.debug(f"Task {task_id} submitted")
+        self._logger.debug("Submitted task %s", task_id)
         return task_id
 
     def result(self, task_id: str, timeout: float | None = None, cleanup: bool = True) -> Any:
@@ -104,13 +109,13 @@ class PARProcesses:
         try:
             result = future.result(timeout)
         except TimeoutError:
-            self._logger.warning(f"Task {task_id} timed out")
+            self._logger.warning("Task %s timed out", task_id)
             raise
         except CancelledError:
-            self._logger.warning(f"Task {task_id} was cancelled")
+            self._logger.warning("Task %s was cancelled", task_id)
             raise
         except Exception as e:
-            self._logger.error(f"Task {task_id} raised exception: {e}")
+            self._logger.error("Task %s failed: %s", task_id, str(e))
             raise
         finally:
             if cleanup:
@@ -278,4 +283,5 @@ class PARProcesses:
             done_keys = [k for k, f in self._futures.items() if f.done()]
             for k in done_keys:
                 self._futures.pop(k, None)
-        self._logger.debug(f"Cleaned up {len(done_keys)} completed tasks.")
+        if done_keys:
+            self._logger.debug("Cleaned up %d completed tasks", len(done_keys))

@@ -1,42 +1,61 @@
-"""This is a simple clock sample.
+"""Sample clock implementation by subclassing Daemon.
 
-It prints current time each second using a SubClass of Daemon
+Demonstrates how to create a periodic task by subclassing the Daemon class.
+
+Features:
+- Runs every second to print current time
+- Main thread continues executing other work
+- Clean shutdown on keyboard interrupt
 """
 
+import logging
 import time
 from datetime import datetime
+from typing import NoReturn
 
-from daemon import Daemon
+from minibone.daemon import Daemon
+
+
+# Configure basic logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
 class Clock(Daemon):
+    """Daemon subclass that prints current time periodically."""
+
     def __init__(self):
-        super().__init__(name="Clock", interval=1, sleep=0.01)
+        """Initialize clock with 1 second interval."""
+        super().__init__(name="ClockSubclass", interval=1, sleep=0.01)
 
-    def on_process(self):
-        print(datetime.now().strftime("%Y-%m-%d:%H:%M:%S"))
+    def on_process(self) -> None:
+        """Print current timestamp on each interval."""
+        logger.info(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 
-if __name__ == "__main__":
+def main() -> NoReturn:
+    """Run the clock demo with Daemon subclass."""
     try:
-        print("Sample clock subclassing Daemon")
-        print("Press ctrl+c to exit")
+        logger.info("Starting clock using Daemon subclass")
+        logger.info("Press Ctrl+C to exit")
+
         clock = Clock()
         clock.start()
 
         while True:
-            print("I am going to sleep. Do not disturb please")
-            sleeping = 15
-            time.sleep(sleeping)
-            # clock will be running in the background in another thread
-            print(f"I awoke after a long sleep of {sleeping} seconds in the main thread")
+            logger.info("Main thread going to sleep")
+            sleep_seconds = 15
+            time.sleep(sleep_seconds)
+            logger.info("Main thread awake after %d seconds", sleep_seconds)
 
     except KeyboardInterrupt:
-        print("Caught keyboard interrupt, exiting")
-
+        logger.info("Received keyboard interrupt, shutting down")
     except Exception as e:
-        print("Error %s", e)
-
+        logger.error("Unexpected error: %s", str(e))
     finally:
         clock.stop()
-        print("Doing Shutdown")
+        logger.info("Clock stopped")
+
+
+if __name__ == "__main__":
+    main()

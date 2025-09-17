@@ -1,11 +1,12 @@
-# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/ 
 
-# https://packaging.python.org/en/latest/specifications/core-metadata/
+# https://packaging.python.org/en/latest/specifications/core-metadata/ 
 
 [project]
 name = "minibone"
 version = "0.8.0"
 description = "Small boiler plate with tools for multithreading."
+requires-python = ">=3.10"
 keywords = ["multithreading", "task", "job", "background"]
 authors = [
     {name = "Erick Romero", email = "erick@gjrlabs.com"}
@@ -13,17 +14,16 @@ authors = [
 readme = "README.md"
 license-files = ["LICEN[CS]E*"]
 
-# https://pypi.org/classifiers/
+# https://pypi.org/classifiers/ 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Topic :: Utilities",
     "Topic :: Software Development :: Libraries",
 ]
-requires-python = ">=3.10"
-dependencies = ["aiofiles", "pyyaml", "requests", "tomlkit"]
+dependencies = ["aiofiles", "pyyaml", "httpx", "tomlkit"]
 
 [project.urls]
 "Homepage" = "https://github.com/erromu/minibone/"
@@ -56,7 +56,7 @@ select = [
     "F",    # Pyflakes (logical errors, unused imports/variables)
     "I",    # Import sorting (isort)
     "N",    # pep8-naming (naming conventions)
-    #"PTH",  # Pathlib usage (prefer pathlib over os.path)
+    "PTH",  # Pathlib usage (prefer pathlib over os.path)
     "PL",   # Pylint (various code quality checks)
     "SIM",  # Code simplification suggestions
     "TCH",  # Type checking (type annotation issues)
@@ -70,32 +70,14 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party      = ["src"]        # treat anything under src/ as first-party
-
-# --- layout tweaks ---
-lines-after-imports    = 2              # one blank line after the last import
-lines-between-types    = 0              # no extra blank line between 'import x' and 'from x import y'
-
-# --- ordering rules ---
-order-by-type          = true           # CONST, Class, var (default)
-case-sensitive         = false          # case-insensitive alphabetical (default)
-
-# --- force special cases ---
-force-to-top           = ["__future__"] # keep future imports at the very top
-combine-as-imports     = false          # uncomment if you want separate lines for `from x import y as z`
-
+known-first-party = ["src"]
+lines-after-imports = 2
+force-single-line = true
+order-by-type = true
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
-skip-magic-trailing-comma = false
-
-[tool.mypy]
-python_version = "3.10"
-strict = true
-warn_unused_ignores = true
-disallow_any_generics = true
-exclude = ["docs/"]
 
 [tool.pytest.ini_options]
 addopts = ["-q", "--strict-markers", "--tb=short"]

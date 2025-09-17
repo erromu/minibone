@@ -26,8 +26,12 @@ class Config(dict):
 
         Arguments
         ---------
-        format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
+        format      FORMAT  A valid config.FORMAT value (TOML, YAML, JSON)
         filepath:   str     The filepath of the file to load
+
+        Returns
+        -------
+        dict | None: Parsed config data or None on error
         """
         assert isinstance(format, FORMAT)
         assert isinstance(filepath, str) and len(filepath) > 0
@@ -56,8 +60,12 @@ class Config(dict):
 
         Arguments
         ---------
-        format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
+        format      FORMAT  A valid config.FORMAT value (TOML, YAML, JSON)
         filepath:   str     The filepath of the file to load
+
+        Returns
+        -------
+        dict | None: Parsed config data or None on error
         """
         assert isinstance(format, FORMAT)
         assert isinstance(filepath, str) and len(filepath) > 0
@@ -121,26 +129,34 @@ class Config(dict):
 
     @classmethod
     async def aiofrom_toml(cls, filepath: str, defaults: dict = None):
-        """Load a toml configuration file in asycn mode and return a Config instance
+        """Load a toml configuration file in async mode and return a Config instance
 
         Arguments
         ---------
         filepath:   str     The filepath of the file to load
         defaults:   dict    A dictionary with default settings.
                             Values from the file will expand/replace defaults
+
+        Returns
+        -------
+        Config: New Config instance with merged settings
         """
         settings = await cls.aiofrom_file(FORMAT.TOML, filepath)
         return Config(cls.merge(defaults, settings), filepath)
 
     @classmethod
     async def aiofrom_yaml(cls, filepath: str, defaults: dict = None):
-        """Load a toml configuration file in asycn mode and return a Config instance
+        """Load a yaml configuration file in async mode and return a Config instance
 
         Arguments
         ---------
         filepath:   str     The filepath of the file to load
         defaults:   dict    A dictionary with default settings.
                             Values from the file will expand/replace defaults
+
+        Returns
+        -------
+        Config: New Config instance with merged settings
         """
         settings = await cls.aiofrom_file(FORMAT.YAML, filepath)
         return Config(cls.merge(defaults, settings), filepath)
@@ -175,8 +191,14 @@ class Config(dict):
         if not settings:
             settings = {}
 
-        # TODO return a merge including second and nth sub-levels on the dict
-        return defaults | settings
+        # Deep merge dictionaries
+        result = defaults.copy()
+        for key, value in settings.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = cls.merge(result[key], value)
+            else:
+                result[key] = value
+        return result
 
     @classmethod
     def to_file(cls, format: FORMAT, filepath: str, data: dict | list):
@@ -184,7 +206,7 @@ class Config(dict):
 
         Arguments
         ---------
-        format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
+        format      FORMAT  A valid config.FORMAT value (TOML, YAML, JSON)
         """
         assert isinstance(format, FORMAT)
         assert isinstance(filepath, str) and len(filepath) > 0
@@ -214,7 +236,7 @@ class Config(dict):
 
         Arguments
         ---------
-        format      FORMAT  A valid config.FORMAT value (TOML, YALM, JSON)
+        format      FORMAT  A valid config.FORMAT value (TOML, YAML, JSON)
         """
         assert isinstance(format, FORMAT)
         assert isinstance(filepath, str) and len(filepath) > 0
