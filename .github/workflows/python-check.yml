@@ -1,54 +1,55 @@
 name: Code
 
 on:
-  push:
+    push:
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.10"
-  REQUIREMENTS_FILE: ""        # left empty on purpose
+    PYTHON_VERSION: "3.10"
+    REQUIREMENTS_FILE: "" # left empty on purpose
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  code-quality:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/python-setup
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache-key-suffix: lint
+    code-quality:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: ./.github/actions/python-setup
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache-key-suffix: lint
 
-      - name: Run linting checks
-        run: ruff check --no-fix --config pyproject.toml --output-format=github
+            - name: Run linting checks
+              run: ruff check --no-fix --config pyproject.toml --output-format=github
 
-  code-formatting:
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/python-setup
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache-key-suffix: fmt
+    code-formatting:
+        runs-on: ubuntu-latest
+        continue-on-error: true
+        steps:
+            - uses: actions/checkout@v4
+            - uses: ./.github/actions/python-setup
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache-key-suffix: fmt
 
-      - name: Run formatting checks
-        run: ruff format --check --config pyproject.toml
+            - name: Run formatting checks
+              run: ruff format --check --config pyproject.toml
 
-  code-testing:
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/python-setup
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache-key-suffix: unittest
+    code-testing:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: ./.github/actions/python-setup
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache-key-suffix: unittest
 
-      - name: Unittest
-        run: |
-          export PYTHONPATH=./src
-          python -m unittest -v ./tests/test_*.py
+            - name: Unittest
+              run: |
+                  export PYTHONPATH=./src
+                  python -m unittest -v ./tests/test_*.py
