@@ -6,11 +6,11 @@ minibone is an easy to use yet powerful boiler plate for multithreading, multipr
 
 - __Config__: To handle configuration settings
 - __Daemon__: To run a periodical task in another thread
-- __Emailer__: To send emails in parallel threads
+- __Emailer__: To send emails in concurrent threads
 - __HTMLBase__: To render html using snippets and toml configuration file in async mode
-- __HTTPt__: HTTP client to do parallel request in threads
+- __HTTPt__: HTTP client to do concurrent requests in threads
 - __Logging__: To setup a logger friendly with filerotation
-- __PARThreads__: To run concurrent tasks in threads
+- __IOThreads__: To run concurrent tasks in threads
 - __PARProcesses__: To run parallel CPU-bound tasks
 - __Storing__: To queue and store files periodically in a thread (queue and forget)
 

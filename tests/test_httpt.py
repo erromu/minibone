@@ -6,13 +6,13 @@ import httpx
 
 from minibone.httpt import HTTPt
 from minibone.httpt import Verbs
-from minibone.io_threads import PARIOThreads
+from minibone.io_threads import IOThreads
 
 
 class TestHTTPt(unittest.TestCase):
     def setUp(self) -> None:
         """Set up test worker and client."""
-        self.worker = PARIOThreads()
+        self.worker = IOThreads()
         self.client = HTTPt(worker=self.worker)
 
     def tearDown(self) -> None:

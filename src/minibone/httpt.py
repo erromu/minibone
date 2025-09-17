@@ -3,7 +3,7 @@ from enum import Enum
 
 import httpx
 
-from minibone.io_threads import PARIOThreads
+from minibone.io_threads import IOThreads
 
 
 class Verbs(Enum):
@@ -29,11 +29,11 @@ class HTTPt:
 
     Basic Usage:
     -----------
-    from minibone.io_threads import PARIOThreads
+    from minibone.io_threads import IOThreads
     from minibone.httpt import HTTPt
 
     # Initialize worker and client
-    worker = PARIOThreads()
+    worker = IOThreads()
     client = HTTPt(worker)
 
     # Queue requests
@@ -67,18 +67,18 @@ class HTTPt:
     - Default User-Agent header is set
     """
 
-    def __init__(self, worker: PARIOThreads, timeout: int = 5, headers: dict = None):
+    def __init__(self, worker: IOThreads, timeout: int = 5, headers: dict = None):
         """Initialize HTTP client.
 
         Args:
-            worker: PARIOThreads instance to handle parallel execution
+            worker: IOThreads instance to handle parallel execution
             timeout: Request timeout in seconds (default: 5)
             headers: Optional dictionary of headers to add to requests
 
         Note:
             The worker is ready to process requests immediately after initialization
         """
-        assert isinstance(worker, PARIOThreads)
+        assert isinstance(worker, IOThreads)
         assert isinstance(timeout, int) and timeout > 0
         self._logger = logging.getLogger(__class__.__name__)
 
