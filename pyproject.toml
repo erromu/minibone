@@ -1,30 +1,29 @@
-# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/ 
 
-# https://packaging.python.org/en/latest/specifications/core-metadata/
+# https://packaging.python.org/en/latest/specifications/core-metadata/ 
 
 [project]
 name = "minibone"
-version = "0.7.5"
+version = "0.8.0"
 description = "Small boiler plate with tools for multithreading."
+requires-python = ">=3.10"
 keywords = ["multithreading", "task", "job", "background"]
 authors = [
     {name = "Erick Romero", email = "erick@gjrlabs.com"}
 ]
-license = {file = "LICENSE"}
 readme = "README.md"
+license-files = ["LICEN[CS]E*"]
 
-# https://pypi.org/classifiers/
+# https://pypi.org/classifiers/ 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Topic :: Utilities",
     "Topic :: Software Development :: Libraries",
 ]
-requires-python = ">=3.0"
-dependencies = ["aiofiles", "pyyaml", "requests", "tomlkit"]
+dependencies = ["aiofiles", "pyyaml", "httpx", "tomlkit"]
 
 [project.urls]
 "Homepage" = "https://github.com/erromu/minibone/"
@@ -34,12 +33,63 @@ dependencies = ["aiofiles", "pyyaml", "requests", "tomlkit"]
 "Repository" = "https://github.com/erromu/minibone.git"
 #"Changelog" = ""
 
+#####################################################
+# 1. setuptools editable install + import root
+#####################################################
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+#####################################################
+# 2. Ruff (linter + formatter + isort)
+#####################################################
 [tool.ruff]
-# Set the maximum line length to 79.
 line-length = 120
+target-version = "py310"
+src = ["src"]
 
 [tool.ruff.lint]
-# Add the `line-too-long` rule to the enforced rule set. By default, Ruff omits rules that
-# overlap with the use of a formatter, like Black, but we can override this behavior by
-# explicitly adding the rule.
-extend-select = ["E501"]
+select = [
+    "ARG",  # Unused function arguments
+    "B",    # Bugbear (likely bugs and design issues)
+    "E",    # Pycodestyle errors (PEP 8 style violations)
+    "F",    # Pyflakes (logical errors, unused imports/variables)
+    "I",    # Import sorting (isort)
+    "N",    # pep8-naming (naming conventions)
+    #"PTH",  # Pathlib usage (prefer pathlib over os.path)
+    "PL",   # Pylint (various code quality checks)
+    "SIM",  # Code simplification suggestions
+    "TCH",  # Type checking (type annotation issues)
+    "UP",   # pyupgrade (outdated syntax, suggest modern Python)
+    "W",    # Pycodestyle warnings (less severe than E)
+]
+ignore = [
+    "E203",     # Whitespace before ':' (conflicts with Black formatter)
+    "E501",     # let the formatter handle line length
+    "PLR0913",  # Too many arguments in function definition
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+lines-after-imports = 2
+force-single-line = true
+order-by-type = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+addopts = ["-q", "--strict-markers", "--tb=short"]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files   = ["test_*.py", "*_test.py"]
+xfail_strict = true
+
+[tool.coverage.run]
+branch = true
+source = ["src/"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

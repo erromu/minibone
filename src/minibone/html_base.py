@@ -10,15 +10,31 @@ from minibone.config import Config
 
 
 class HTMLBase:
-    """Class to render html using snippets and toml configuration file in async mode"""
+    """Class to render HTML templates using snippets and TOML configuration (async capable).
+
+    Features:
+    ---------
+    - Async file operations
+    - Template rendering with string.Template
+    - Snippet caching
+    - TOML configuration support
+
+    Basic Usage:
+    -----------
+    from minibone.html_base import HTMLBase
+
+    html = HTMLBase(snippets_path="/path/to/snippets")
+    rendered = await html.aiofrom_toml("config.toml")
+    """
 
     def __init__(self, snippets_path: str = "./html/pages/snippets", ext: str = "html", cache_life: int = 300):
         """
-        Arguments
-        ---------
-        snippets_path:  str     The path where snippets are stored
-        ext:            str     The extensio of the snippets files
-        cache_life:     int     Number of seconds to have html snippets in memory before reloading them
+        Initialize HTML renderer.
+
+        Args:
+            snippets_path: Path to directory containing HTML snippet files
+            ext: File extension for snippets (default: "html")
+            cache_life: Cache lifetime in seconds (default: 300)
         """
         assert isinstance(snippets_path, str)
         assert isinstance(ext, str)
@@ -32,18 +48,19 @@ class HTMLBase:
 
         self._snippets = {}
 
-    async def _aiofile(self, file: str) -> str:
-        """Load content from a file using encoding utf-8 in async mode and return it
+    async def _aiofile(self, file: str) -> str | None:
+        """Asynchronously read file contents.
 
-        Arguments
-        ---------
-        file        str     The file to load from disk
+        Args:
+            file: Path to file to read
+
+        Returns:
+            File contents as string or None if error occurs
         """
         assert isinstance(file, str)
         try:
             async with aiofiles.open(
                 file,
-                "rt",
                 encoding="utf-8",
             ) as f:
                 return await f.read()
@@ -52,8 +69,11 @@ class HTMLBase:
             self._logger.error("_aiofile %s", e)
             return None
 
-    async def _iosnippets(self) -> str:
-        """Load all HTML snippets from files in async mode only when cached is old."""
+    async def _iosnippets(self) -> None:
+        """Load all HTML snippets from files (async, cached).
+
+        Only reloads snippets if cache has expired.
+        """
 
         epoch = time.time()
         if self._epoch > epoch:
@@ -70,34 +90,34 @@ class HTMLBase:
                 if content:
                     self._snippets[name] = content
 
-    async def aio_file(self, file: str) -> str:
-        """Return the file's content using encoding utf-8 in async mode.
+    async def aio_file(self, file: str) -> str | None:
+        """Asynchronously read file contents (public interface).
 
-        Arguments
-        ---------
-        file        str     The file to load from disk
+        Args:
+            file: Path to file to read
+
+        Returns:
+            File contents as string or None if error occurs
         """
         return await self._aiofile(file)
 
     def render(self, template: str, mapping: dict) -> str:
-        """Return a str render for template using mapping keys and values
+        """Render template string with variable substitution.
 
-        Arguments
-        ---------
-        template    str     The template in string format
-        mapping     dict    A dictionary of key an values
+        Args:
+            template: Template string with ${placeholders}
+            mapping: Dictionary of placeholder replacements
 
-        Sample
-        ------
+        Returns:
+            Rendered string with placeholders replaced
 
-        h = HTMLBase()
-        template = "<div>Hello ${user}</div>"
-        render = h.render(template, {"user": "John"})
+        Raises:
+            ValueError: If template or mapping are invalid
 
-        # will return
-        # <div>Hello John</div>
-        #
-        # Further reading in python string.Template module
+        Example:
+            >>> html = HTMLBase()
+            >>> html.render("<div>${name}</div>", {"name": "John"})
+            '<div>John</div>'
         """
         assert isinstance(template, str)
         assert isinstance(mapping, dict)
@@ -113,7 +133,7 @@ class HTMLBase:
 
         Notes
         -----
-        - Minimum toml configuration has a [page] block with 'html_file' settign
+        - Minimum toml configuration has a [page] block with 'html_file' setting
         - Add html snippets (.html) into the snippets path
         - In the toml file add additional blocks for each snippet. Named blocks as each snippet file's name
         - Add key/values to be replaced in the snippets (see render method)

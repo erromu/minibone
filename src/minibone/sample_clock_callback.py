@@ -1,38 +1,55 @@
-"""This is a simple clock sample.
+"""Sample clock implementation using Daemon callback mode.
 
-It prints current time each second using a Daemon callback
+Demonstrates how to use the Daemon class with a callback function to run
+a periodic task in the background while the main thread continues working.
+
+Features:
+- Runs callback every second to print current time
+- Main thread continues executing other work
+- Clean shutdown on keyboard interrupt
 """
 
+import logging
 import time
 from datetime import datetime
+from typing import NoReturn
 
-from daemon import Daemon
-
-
-def callback():
-    print(datetime.now().strftime("%Y-%m-%d:%H:%M:%S"))
+from minibone.daemon import Daemon
 
 
-if __name__ == "__main__":
+# Configure basic logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+
+def callback() -> None:
+    """Callback function that prints current timestamp."""
+    logger.info(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+
+def main() -> NoReturn:
+    """Run the clock demo with background callback."""
     try:
-        print("Sample clock using Daemon callback for the task")
-        print("Press ctrl+c to exit")
-        clock = Daemon(name="Clock", interval=1, sleep=0.01, callback=callback)
+        logger.info("Starting clock with Daemon callback")
+        logger.info("Press Ctrl+C to exit")
+
+        clock = Daemon(name="ClockCallback", interval=1, sleep=0.01, callback=callback)
         clock.start()
 
         while True:
-            print("I am going to sleep. Do not disturb please")
-            sleeping = 15
-            time.sleep(sleeping)
-            # clock will be running in the background in another thread
-            print("I awoke after a long sleep of {%d} seconds in the main thread" % sleeping)
+            logger.info("Main thread going to sleep")
+            sleep_seconds = 15
+            time.sleep(sleep_seconds)
+            logger.info("Main thread awake after %d seconds", sleep_seconds)
 
     except KeyboardInterrupt:
-        print("Caught keyboard interrupt, exiting")
-
+        logger.info("Received keyboard interrupt, shutting down")
     except Exception as e:
-        print("Error %s" % e)
-
+        logger.error("Unexpected error: %s", str(e))
     finally:
         clock.stop()
-        print("Doing Shutdown")
+        logger.info("Clock stopped")
+
+
+if __name__ == "__main__":
+    main()

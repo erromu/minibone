@@ -9,9 +9,9 @@ minibone is an easy to use yet powerful boiler plate for multithreading, multipr
 - __Emailer__: To send emails in parallel threads
 - __HTMLBase__: To render html using snippets and toml configuration file in async mode
 - __HTTPt__: HTTP client to do parallel request in threads
-- __Logging__: To setup a logger friendly with filerotation 
-- __PARProcesses__: To run parallel tasks as processes
-- __PARThreads__: To run concurrent tasks in threads 
+- __Logging__: To setup a logger friendly with filerotation
+- __PARThreads__: To run concurrent tasks in threads
+- __PARProcesses__: To run parallel CPU-bound tasks
 - __Storing__: To queue and store files periodically in a thread (queue and forget)
 
 It will be deployed to PyPi when a new release is created
@@ -19,9 +19,7 @@ It will be deployed to PyPi when a new release is created
 ## Installation
 
 ```shell
-
 pip install minibone
-
 ```
 
 ## Config
@@ -29,7 +27,6 @@ pip install minibone
 Handle configuration settings in memory and/or persist them into toml/yaml/json formats
 
 ```python
-
 from minibone.config import Config
 
 # Create a new set of settings and persist them
@@ -48,9 +45,7 @@ cfg3 = asyncio.run(Config.aiofrom_toml("config.toml"))
 
 Usually config files are editted externaly then loaded as read only on your code, so in such case, you may want to subclass Config for easier usage
 
-
 ```python
-
 from minibone.config import Config
 
 class MyConfig(Config):
@@ -72,7 +67,6 @@ if __name__ == "__main__":
     cfg = MyConfig()
     print(cfg.port)
     # it will print the default port value if not port setting was defined in config.toml
-
 ```
 
 ## Daemon
@@ -108,7 +102,6 @@ Setup a logger using UTC time that outputs logs to stdin or to a file.
 It is friendly to filerotation (when setting output to a file)
 
 ```python
-
 import logging
 
 from minibone.logging import setup_log
@@ -124,7 +117,6 @@ if __name__ == "__main__":
     # or call the next lines instead if you want to log into a file
     # setup_log(file="sample.log", level="INFO")
     # logging.info('yay!')
-
 ```
 
 ## Contribution

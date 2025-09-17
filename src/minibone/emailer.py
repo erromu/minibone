@@ -1,27 +1,36 @@
-import email.utils as utils
 import logging
+import re
 import smtplib
+from email import utils
 from email.message import EmailMessage
 
 from minibone.daemon import Daemon
 
 
 class Emailer(Daemon):
-    """Class to send emails using a SMTP server
+    """Class to send emails using an SMTP server with background queue processing.
 
-    This class allows to send emails using a queue in a thread as underground task.
-    The queue will be processed as FIFO (first in first out)
-    Currently only text and html content are supported (not attachments)
+    Features:
+    ---------
+    - Thread-safe email queue (FIFO)
+    - Supports text and HTML content
+    - Automatic retry on failure
+    - Background processing
+    - Clean shutdown (processes all queued emails before stopping)
 
-    Usage:
-    ------
-    intance Emailer, call start, call queue to send emails, call stop at the end of your program
-    note stop finishes until all queued emails were sent
+    Basic Usage:
+    -----------
+    from minibone.emailer import Emailer
+    import time
 
-    Example
-    -------
-    import Emailer
-    import timer
+    # Initialize with your SMTP server details
+    emailer = Emailer(
+        host="smtp.example.com",
+        port=587,
+        ssl=False,
+        username="user@example.com",
+        password="yourpassword"
+    )
 
     # use your own server configuration
     emailer = Emailer(host, port, ssl=True, username="user", password="1234")
@@ -46,7 +55,7 @@ class Emailer(Daemon):
         """
         Arguments
         ---------
-        host:       str     host to conenct to
+        host:       str     Host to connect to
         port:       int     the port number to connect to
         ssl:        bool    True to use SSL encryption (must be supported by the server)
                             Set to False for plain connection (And may God have mercy on your poor soul!)
@@ -95,15 +104,28 @@ class Emailer(Daemon):
     def queue(
         self,
         from_address: str,
-        to: str | list,
+        to: str | list[str],
         subject: str,
         content_txt: str = None,
         content_html: str = None,
-        cc: str = None,
-        bcc: str = None,
+        cc: str | list[str] = None,
+        bcc: str | list[str] = None,
         replyto: str = None,
-    ):
-        """Add a new email to the queue to be delivered
+    ) -> None:
+        """Add a new email to the queue to be delivered.
+
+        Args:
+            from_address: Sender email address
+            to: Recipient email address(es)
+            subject: Email subject line
+            content_txt: Plain text email content
+            content_html: HTML email content
+            cc: CC recipient email address(es)
+            bcc: BCC recipient email address(es)
+            replyto: Reply-to email address (if different from from_address)
+
+        Raises:
+            ValueError: If invalid email addresses are provided
 
         Arguments
         ---------
@@ -117,12 +139,12 @@ class Emailer(Daemon):
         replyto:        str     Addres to get reply if diferrent from from_address
         """
         assert isinstance(from_address, str)
-        assert isinstance(to, (str, list))
+        assert isinstance(to, str | list)
         assert isinstance(subject, str)
         assert not content_txt or isinstance(content_txt, str)
         assert not content_html or isinstance(content_html, str)
-        assert not cc or isinstance(cc, (str, list))
-        assert not bcc or isinstance(bcc, (str, list))
+        assert not cc or isinstance(cc, str | list)
+        assert not bcc or isinstance(bcc, str | list)
         assert not replyto or isinstance(replyto, str)
 
         if isinstance(to, str):
@@ -161,23 +183,29 @@ class Emailer(Daemon):
         # keywords /
         # optional-field)
 
-        self.lock.acquire()
-        self._queue.append({
-            "from": from_address,
-            "to": to,
-            "subject": subject,
-            "text": content_txt,
-            "html": content_html,
-            "cc": cc,
-            "bcc": bcc,
-            "replyto": replyto,
-        })
-        self.lock.release()
+        # Basic email format validation
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", from_address):
+            raise ValueError(f"Invalid from address: {from_address}")
 
-    def on_process(self):
-        self.lock.acquire()
+        with self.lock:
+            self._queue.append(
+                {
+                    "from": from_address,
+                    "to": to,
+                    "subject": subject,
+                    "text": content_txt,
+                    "html": content_html,
+                    "cc": cc,
+                    "bcc": bcc,
+                    "replyto": replyto,
+                }
+            )
 
-        if len(self._queue) > 0:
+    def on_process(self) -> None:
+        with self.lock:
+            if not self._queue:
+                return
+
             item = self._queue[0]
             try:
                 msg = EmailMessage()
@@ -216,10 +244,10 @@ class Emailer(Daemon):
 
                 self._logger.info("Dispatched [{}] to {}".format(item["subject"], item["to"]))
 
+            except smtplib.SMTPException as e:
+                self._logger.error("SMTP error sending to %s: %s", item["to"], e)
             except Exception as e:
-                self._logger.error("Error sending email to %s  %s", item["to"], e)
-
-        self.lock.release()
+                self._logger.error("Unexpected error sending email: %s", e)
 
     def stop(self):
         super().stop()
