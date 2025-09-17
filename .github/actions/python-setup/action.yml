@@ -30,5 +30,5 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        pip install ruff
+        pip install ruff aiofiles pyyaml httpx tomlkit
         # [ -n "$REQUIREMENTS_FILE" ] && pip install -r "$REQUIREMENTS_FILE"
