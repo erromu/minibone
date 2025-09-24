@@ -3,7 +3,7 @@ import logging.handlers
 import time
 
 
-def setup_log(
+def setup_logging(
     file: str = None, level: str | int = logging.INFO, log_format: str = None, date_format: str = None
 ) -> None:
     """Configure logging with file rotation or stderr output.
@@ -19,10 +19,10 @@ def setup_log(
 
     Example:
         >>> # Log to file with DEBUG level
-        >>> setup_log("app.log", "DEBUG")
+        >>> setup_logging("app.log", "DEBUG")
         >>>
         >>> # Log to stderr with custom format
-        >>> setup_log(None, logging.INFO,
+        >>> setup_logging(None, logging.INFO,
         ...          "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     """
     if not isinstance(level, int | str):
