@@ -1,6 +1,7 @@
 import logging
 import threading
 import time
+from collections.abc import Callable
 
 
 class Daemon:
@@ -55,7 +56,7 @@ class Daemon:
         name: str = None,
         interval: int = 60,
         sleep: float = 0.5,
-        callback=None,
+        callback: Callable | None = None,
         iter: int = -1,
         daemon: bool = True,
         **kwargs,
@@ -105,7 +106,7 @@ class Daemon:
         self._stopping = False
 
         self._name = name
-        self._interval = interval
+        self._interval = max(interval - sleep, 0)
         self._sleep = sleep
         self._check = 0
         self._iter = iter
@@ -187,10 +188,14 @@ class Daemon:
         """
         with self.lock:
             self._stopping = True
-        self._process.join(timeout=self._interval * 2)
+
+        # Wait for thread to finish, with reasonable timeout
+        # Use max of 5 seconds or 2 * interval (whichever is larger) to handle long-running callbacks
+        timeout = max(5.0, self._interval * 2)
+        self._process.join(timeout=timeout)
 
         if self._process.is_alive():
-            self._logger.warning("Thread did not stop gracefully")
+            self._logger.warning("Thread did not stop gracefully after %.1f seconds", timeout)
 
         self._logger.debug(
             "stopping %s task at interval: %.2f sleep: %.2f iterate: %d",

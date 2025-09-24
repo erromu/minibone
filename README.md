@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
 It is just another python class to run a periodical task in another thread. It can be used in two modes: subclasing and callback
 
-#### Usage as SubClass mode
+### Usage as SubClass mode
 
 - Subclass Daemon
 - call super().__init__() in yours
@@ -84,9 +84,9 @@ It is just another python class to run a periodical task in another thread. It c
 - call start() method to keep running on_process in a new thread
 - call stop() to finish the thread
 
-Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock.py) for a sample
+Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/samples/sample_clock.py) for a sample
 
-#### Usage as callback mode
+### Usage as callback mode
 
 - Instance Daemon by passing a callable
 - Add logic to your callable method
@@ -94,7 +94,34 @@ Check [sample_clock.py](https://github.com/erromu/minibone/blob/main/src/minibon
 - call start() method to keep running callable in a new thread
 - call stop() to finish the thread
 
-Check [sample_clock_callback.py](https://github.com/erromu/minibone/blob/main/src/minibone/sample_clock_callback.py) for a sample
+Check [sample_clock_callback.py](https://github.com/erromu/minibone/blob/main/samples/sample_clock_callback.py) for a sample
+
+## AsyncDaemon
+
+It is just another python class to run a periodical task using asyncio instead of threads. It can be used in two modes: subclasing and callback
+
+### Usage as SubClass mode
+
+- Subclass AsyncDaemon
+- call super().__init__() in yours
+- Overwrite on_process method with yours (must be async)
+- Add logic you want to run inside on_process
+- Be sure your methods are async-safe to avoid race condition
+- self.lock is available for async with self.lock context manager
+- call await start() method to keep running on_process as a task
+- call await stop() to finish the task
+
+Check [sample_async_clock.py](https://github.com/erromu/minibone/blob/main/samples/sample_async_clock.py) for a sample
+
+### Usage as callback mode
+
+- Instance AsyncDaemon by passing an async callable
+- Add logic to your callable method (must be async)
+- Be sure your callable is async-safe to avoid race condition
+- call await start() method to keep running callable as a task
+- call await stop() to finish the task
+
+Check [sample_async_clock_callback.py](https://github.com/erromu/minibone/blob/main/samples/sample_async_clock_callback.py) for a sample
 
 ## Logging
 
