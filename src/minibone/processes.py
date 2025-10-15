@@ -6,7 +6,6 @@ from concurrent.futures import CancelledError
 from concurrent.futures import Future
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import TimeoutError
-from threading import Lock
 from typing import Any
 
 
@@ -60,7 +59,6 @@ class PARProcesses:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._executor = ProcessPoolExecutor(max_workers=max_workers)
         self._futures: dict[str, Future] = {}  # Maps task IDs to Future objects
-        self.lock = Lock()  # Protects access to _futures
         self._shutdown = False  # Whether shutdown has been initiated
 
     def submit(self, fn: Callable, *args, **kwargs) -> str:
@@ -79,8 +77,7 @@ class PARProcesses:
             raise RuntimeError("Cannot submit tasks after shutdown")
         task_id = str(uuid.uuid4())
         future = self._executor.submit(fn, *args, **kwargs)
-        with self.lock:
-            self._futures[task_id] = future
+        self._futures[task_id] = future
         self._logger.debug("Submitted task %s", task_id)
         return task_id
 
@@ -105,8 +102,7 @@ class PARProcesses:
         Note:
             After calling this method with cleanup=True, the result cannot be retrieved again.
         """
-        with self.lock:
-            future = self._futures.get(task_id)
+        future = self._futures.get(task_id)
         if not future:
             raise KeyError(f"No such task: {task_id}")
         try:
@@ -122,8 +118,7 @@ class PARProcesses:
             raise
         finally:
             if cleanup:
-                with self.lock:
-                    self._futures.pop(task_id, None)
+                self._futures.pop(task_id, None)
         return result
 
     async def aresult(self, task_id: str, timeout: float | None = None, cleanup: bool = True) -> Any:
@@ -148,8 +143,7 @@ class PARProcesses:
             After calling this method with cleanup=True, the result cannot be retrieved again.
         """
         loop = asyncio.get_running_loop()
-        with self.lock:
-            future = self._futures.get(task_id)
+        future = self._futures.get(task_id)
         if not future:
             raise KeyError(f"No such task: {task_id}")
 
@@ -169,8 +163,7 @@ class PARProcesses:
             raise
         finally:
             if cleanup:
-                with self.lock:
-                    self._futures.pop(task_id, None)
+                self._futures.pop(task_id, None)
 
     def wait_all(self, cleanup: bool = True) -> dict[str, Any]:
         """
@@ -186,8 +179,7 @@ class PARProcesses:
         Note:
             If a task raises an exception, the exception object is stored in the results dict.
         """
-        with self.lock:
-            futures = self._futures.copy()
+        futures = self._futures.copy()
         results = {}
         for task_id, future in futures.items():
             try:
@@ -213,8 +205,7 @@ class PARProcesses:
             If a task raises an exception, the exception object is stored in the results dict.
         """
         loop = asyncio.get_running_loop()
-        with self.lock:
-            futures = self._futures.copy()
+        futures = self._futures.copy()
         results = {}
         for task_id, future in futures.items():
             try:
@@ -264,8 +255,7 @@ class PARProcesses:
         Returns:
             str: "unknown", "cancelled", "running", "exception", "done", or "pending"
         """
-        with self.lock:
-            future = self._futures.get(task_id)
+        future = self._futures.get(task_id)
         if not future:
             return "unknown"
         if future.cancelled():
@@ -282,9 +272,8 @@ class PARProcesses:
         """
         Remove all completed tasks from the futures dictionary.
         """
-        with self.lock:
-            done_keys = [k for k, f in self._futures.items() if f.done()]
-            for k in done_keys:
-                self._futures.pop(k, None)
+        done_keys = [k for k, f in self._futures.items() if f.done()]
+        for k in done_keys:
+            self._futures.pop(k, None)
         if done_keys:
             self._logger.debug("Cleaned up %d completed tasks", len(done_keys))

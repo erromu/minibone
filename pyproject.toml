@@ -4,7 +4,7 @@
 
 [project]
 name = "minibone"
-version = "0.9.0"
+version = "0.9.1"
 description = "Small boilerplate with tools for concurrent/parallel processing."
 requires-python = ">=3.10"
 keywords = ["multithreading", "asyncio", "task", "job", "background", "concurrent", "parallel"]

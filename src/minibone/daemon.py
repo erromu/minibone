@@ -70,8 +70,7 @@ class Daemon:
                                 Must be >= 0
 
         sleep       float       Number of seconds to sleep between iterations when idle.
-                                Must be >= 0 and <= 1. Set to 0 to disable sleeping.
-                                Sleep occurs after calling on_process/callback
+                                Must be > 0
 
         callback    callable    [Optional] A callable object to be called instead of on_process
                                 Default None.
@@ -87,7 +86,7 @@ class Daemon:
         -----
         sleep controls how often the thread checks for work:
         - A higher sleep value reduces CPU usage but increases response time
-        - A value of 0 will poll continuously (high CPU usage)
+        - A value closer to 0 will poll continuously (high CPU usage)
         - stop() will wait for current sleep interval to complete
 
         Recommended values:
@@ -96,7 +95,7 @@ class Daemon:
         """
         assert not name or isinstance(name, str)
         assert isinstance(interval, float | int) and interval >= 0
-        assert isinstance(sleep, float | int) and sleep >= 0 and sleep <= 1
+        assert isinstance(sleep, float | int) and sleep > 0
         assert not callback or callable(callback)
         assert isinstance(iter, int) and (iter == -1 or iter >= 1)
         assert isinstance(daemon, bool)
@@ -106,7 +105,7 @@ class Daemon:
         self._stopping = False
 
         self._name = name
-        self._interval = max(interval - sleep, 0)
+        self._interval = interval
         self._sleep = sleep
         self._check = 0
         self._iter = iter
@@ -186,8 +185,7 @@ class Daemon:
 
         Will wait for current iteration to complete.
         """
-        with self.lock:
-            self._stopping = True
+        self._stopping = True
 
         # Wait for thread to finish, with reasonable timeout
         # Use max of 5 seconds or 2 * interval (whichever is larger) to handle long-running callbacks
