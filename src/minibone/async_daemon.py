@@ -117,7 +117,7 @@ class AsyncDaemon:
         self._stopping = False
 
         self._name = name
-        self._interval = max(interval - sleep, 0)
+        self._interval = interval
         self._sleep = sleep
         self._check = 0
         self._iter = iter
