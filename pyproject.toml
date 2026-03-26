@@ -61,8 +61,8 @@ dev = [
 # 1. setuptools editable install + import root
 #####################################################
 [tool.setuptools.packages.find]
-where = ["src"]           # Look for packages in src/
-include = ["dojutsu*"]    # Include dojutsu package
+where = ["src"]
+include = ["minibone"]
 
 
 #####################################################
