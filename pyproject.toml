@@ -118,21 +118,3 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 
 
-#############################
-# 3. pytest
-#############################
-[tool.pytest.ini_options]
-testpaths      = ["tests"]
-pythonpath     = ["src"] 
-python_files   = ["test_*.py", "*_test.py"]
-addopts        = ["-q", "--strict-markers", "--tb=short"]
-asyncio_mode   = "auto"
-xfail_strict   = true
-
-[tool.coverage.run]
-branch = true
-source = ["src/"]
-
-[tool.coverage.report]
-show_missing = true
-skip_covered = true
