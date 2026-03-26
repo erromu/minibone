@@ -12,11 +12,6 @@ on:
             - master
         paths:
             - "**/*.py"
-        paths-ignore:
-            - "**/*.md"
-            - "**/*.rst"
-            - "docs/**"
-            - ".github/**"
     workflow_dispatch: {}
 
 concurrency:
