@@ -1,9 +1,10 @@
+import asyncio
 import logging
+import uuid
 from enum import Enum
+from typing import Any
 
 import httpx
-
-from minibone.io_threads import IOThreads
 
 
 class Verbs(Enum):
@@ -17,11 +18,11 @@ class Verbs(Enum):
 
 
 class HTTPt:
-    """HTTP client for making parallel requests using worker threads.
+    """HTTP client for making parallel requests using async/concurrent operations.
 
     Features:
     ---------
-    - Multi-threaded request processing
+    - Async concurrent request processing
     - GET, POST, PUT, PATCH, DELETE, HEAD, and OPTIONS methods
     - Request queuing with unique IDs
     - Configurable timeouts
@@ -29,15 +30,13 @@ class HTTPt:
 
     Basic Usage:
     -----------
-    from minibone.io_threads import IOThreads
     from minibone.httpt import HTTPt
 
-    # Initialize worker and client
-    worker = IOThreads()
-    client = HTTPt(worker)
+    # Initialize client
+    client = HTTPt()
 
     # Queue requests
-    uid1 = client.queue_get(url="https://httpbin.org/ip", cmd="test")
+    uid1 = client.queue_get(url="https://httpbin.org/ip")
     uid2 = client.queue_post(url="https://httpbin.org/post", payload={"key": "value"})
     uid3 = client.queue_put(url="https://httpbin.org/put", payload={"key": "value"})
     uid4 = client.queue_patch(url="https://httpbin.org/patch", payload={"key": "value"})
@@ -45,20 +44,22 @@ class HTTPt:
     uid6 = client.queue_head(url="https://httpbin.org/get")
     uid7 = client.queue_options(url="https://httpbin.org/get")
 
-    # Get responses
+    # Get responses (blocking call, uses asyncio.run internally)
     res1 = client.read_resp(uid1)
     res2 = client.read_resp(uid2)
-    res3 = client.read_resp(uid3)
-    res4 = client.read_resp(uid4)
-    res5 = client.read_resp(uid5)
-    res6 = client.read_resp(uid6)
-    res7 = client.read_resp(uid7)
 
     print(res1)
     print(res2)
 
-    # Clean up
-    worker.shutdown()
+    # Async usage:
+    async def main():
+        client = HTTPt()
+        uid = client.queue_get(url="https://httpbin.org/ip")
+        res = await client.aioread_resp(uid)
+        print(res)
+        await client.aclose()
+
+    asyncio.run(main())
 
     Notes:
     ------
@@ -67,26 +68,23 @@ class HTTPt:
     - Default User-Agent header is set
     """
 
-    def __init__(self, worker: IOThreads, timeout: int = 5, headers: dict = None):
+    def __init__(self, timeout: int = 5, headers: dict = None):
         """Initialize HTTP client.
 
         Args:
-            worker: IOThreads instance to handle parallel execution
             timeout: Request timeout in seconds (default: 5)
             headers: Optional dictionary of headers to add to requests
 
         Note:
-            The worker is ready to process requests immediately after initialization
+            asyncio client is created on demand for each async context
         """
-        assert isinstance(worker, IOThreads)
         assert isinstance(timeout, int) and timeout > 0
         self._logger = logging.getLogger(__class__.__name__)
 
         self._timeout = timeout
-        self._worker = worker
+        self._tasks: dict[str, asyncio.Task] = {}  # Maps UID to asyncio.Task
+        self._client: httpx.AsyncClient | None = None
 
-        # TODO take a look to https://netnut.io/httpx-vs-requests
-        self.fetcher = httpx.Client()
         default_headers = {
             "User-Agent": "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             "X-Forwarded-For": "'\"\\--",
@@ -96,7 +94,60 @@ class HTTPt:
         }
         if headers:
             default_headers.update(headers)
-        self.fetcher.headers.update(default_headers)
+        self._default_headers = default_headers
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Get or create async HTTP client."""
+        if self._client is None:
+            self._client = httpx.AsyncClient()
+            self._client.headers.update(self._default_headers)
+        return self._client
+
+    async def aclose(self) -> None:
+        """Close the HTTP client and cancel pending tasks."""
+        # Cancel all pending tasks
+        for task in self._tasks.values():
+            if not task.done():
+                task.cancel()
+        # Close the client
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
+    def _get_or_create_task(self, uid: str) -> asyncio.Task | None:
+        """Get task by UID, or None if not found."""
+        return self._tasks.get(uid)
+
+    async def _execute_and_wait(self, uid: str, timeout: float) -> Any:
+        """Execute a queued coroutine and wait for result.
+
+        Used internally by read_resp to run async operations from sync context.
+        """
+        coro = self._tasks.get(uid)
+        if coro is None:
+            raise KeyError(f"No such task: {uid}")
+
+        # If it's a coroutine, create a task
+        if asyncio.iscoroutine(coro):
+            task = asyncio.create_task(coro)
+            self._tasks[uid] = task  # Replace coroutine with task
+        else:
+            task = coro
+
+        try:
+            return await asyncio.wait_for(task, timeout=timeout)
+        except asyncio.TimeoutError:
+            self._logger.error("Task %s timed out after %d seconds", uid, timeout)
+            raise
+        except asyncio.CancelledError:
+            self._logger.warning("Task %s was cancelled", uid)
+            raise
+        except Exception as e:
+            self._logger.error("Task %s failed: %s", uid, str(e))
+            raise
+        finally:
+            # Clean up completed task
+            self._tasks.pop(uid, None)
 
     def _queue_request(self, verb: Verbs, url: str, **kwargs) -> str:
         """Add a request to the queue and return a UID to retrieve the response with read_resp
@@ -109,7 +160,7 @@ class HTTPt:
 
         Notes:
         ------
-        The UID to return is prefixed with the value of the cmd argument if provided
+        Creates a coroutine that will be executed when read_resp or aioread_resp is called.
         """
         assert isinstance(verb, Verbs)
         assert isinstance(url, str)
@@ -118,25 +169,30 @@ class HTTPt:
             kwargs = dict()
         kwargs["url"] = url
 
-        # Remove cmd from kwargs as it's not needed by _get or _post methods
+        # Remove cmd from kwargs as it's not needed by the HTTP methods
         kwargs.pop("cmd", None)
 
+        # Create the appropriate coroutine
         if verb == Verbs.GET:
-            uid = self._worker.submit(self._get, **kwargs)
+            coro = self._get(**kwargs)
         elif verb == Verbs.POST:
-            uid = self._worker.submit(self._post, **kwargs)
+            coro = self._post(**kwargs)
         elif verb == Verbs.PUT:
-            uid = self._worker.submit(self._put, **kwargs)
+            coro = self._put(**kwargs)
         elif verb == Verbs.PATCH:
-            uid = self._worker.submit(self._patch, **kwargs)
+            coro = self._patch(**kwargs)
         elif verb == Verbs.DELETE:
-            uid = self._worker.submit(self._delete, **kwargs)
+            coro = self._delete(**kwargs)
         elif verb == Verbs.HEAD:
-            uid = self._worker.submit(self._head, **kwargs)
+            coro = self._head(**kwargs)
         elif verb == Verbs.OPTIONS:
-            uid = self._worker.submit(self._options, **kwargs)
+            coro = self._options(**kwargs)
         else:
             raise ValueError(f"Unsupported HTTP verb: {verb}")
+
+        # Store coroutine with UID
+        uid = str(uuid.uuid4())
+        self._tasks[uid] = coro
 
         self._logger.debug("queue_request %s %s", verb, url)
 
@@ -261,21 +317,49 @@ class HTTPt:
         Argument
         --------
         uid:    str     Unique identier returned by queue_post or queue_get
+
+        Note:
+            This is a blocking call that uses asyncio.run internally.
+            Results are removed from cache after retrieval.
         """
         assert isinstance(uid, str)
-        return self._worker.result(uid, timeout=self._timeout)
+        try:
+            return asyncio.run(self._execute_and_wait(uid, self._timeout))
+        except TimeoutError:
+            self._logger.error("read_resp %s timed out", uid)
+            return None
+        except KeyError as e:
+            self._logger.error("read_resp %s not found: %s", uid, str(e))
+            return None
+        except Exception as e:
+            self._logger.error("read_resp %s failed: %s", uid, str(e))
+            return None
 
     async def aioread_resp(self, uid: str) -> object | None:
         """Return the response for the UID (json|text) or None if not found or it got a timeout
+        Async version - use from async context.
 
         Argument
         --------
         uid:    str     Unique identier returned by queue_post or queue_get
+
+        Note:
+            Must be called from an async context. Results are removed from cache after retrieval.
         """
         assert isinstance(uid, str)
-        return await self._worker.aresult(uid, timeout=self._timeout)
+        try:
+            return await self._execute_and_wait(uid, self._timeout)
+        except asyncio.TimeoutError:
+            self._logger.error("aioread_resp %s timed out", uid)
+            return None
+        except KeyError as e:
+            self._logger.error("aioread_resp %s not found: %s", uid, str(e))
+            return None
+        except Exception as e:
+            self._logger.error("aioread_resp %s failed: %s", uid, str(e))
+            return None
 
-    def _get(self, url: str, params: dict = None) -> dict | str | None:
+    async def _get(self, url: str, params: dict = None) -> dict | str | None:
         """Execute GET request and return response.
 
         Args:
@@ -293,10 +377,11 @@ class HTTPt:
             params = dict()
 
         try:
-            r = self.fetcher.get(url, timeout=self._timeout, params=params)
+            client = await self._get_client()
+            r = await client.get(url, timeout=self._timeout, params=params)
             if r.status_code == httpx.codes.OK:
                 try:
-                    return r.json()
+                    return await r.json()
                 except (httpx.DecodingError, ValueError):
                     return r.text
             self._logger.warning("GET %s failed with status %d", url, r.status_code)
@@ -310,7 +395,7 @@ class HTTPt:
 
         return None
 
-    def _put(self, url: str, payload: dict = None, is_json: bool = True) -> dict | str | None:
+    async def _put(self, url: str, payload: dict = None, is_json: bool = True) -> dict | str | None:
         """Execute PUT request and return response.
 
         Args:
@@ -330,7 +415,8 @@ class HTTPt:
             payload = dict()
 
         try:
-            r = self.fetcher.put(
+            client = await self._get_client()
+            r = await client.put(
                 url,
                 json=payload if is_json else None,
                 data=None if is_json else payload,
@@ -338,7 +424,7 @@ class HTTPt:
             )
             if r.status_code == httpx.codes.OK:
                 try:
-                    return r.json() if is_json else r.text
+                    return await r.json() if is_json else r.text
                 except (httpx.DecodingError, ValueError) as e:
                     if is_json:
                         self._logger.error("Expected JSON but got: %s", e)
@@ -354,7 +440,7 @@ class HTTPt:
 
         return None
 
-    def _patch(self, url: str, payload: dict = None, is_json: bool = True) -> dict | str | None:
+    async def _patch(self, url: str, payload: dict = None, is_json: bool = True) -> dict | str | None:
         """Execute PATCH request and return response.
 
         Args:
@@ -374,7 +460,8 @@ class HTTPt:
             payload = dict()
 
         try:
-            r = self.fetcher.patch(
+            client = await self._get_client()
+            r = await client.patch(
                 url,
                 json=payload if is_json else None,
                 data=None if is_json else payload,
@@ -382,7 +469,7 @@ class HTTPt:
             )
             if r.status_code == httpx.codes.OK:
                 try:
-                    return r.json() if is_json else r.text
+                    return await r.json() if is_json else r.text
                 except (httpx.DecodingError, ValueError) as e:
                     if is_json:
                         self._logger.error("Expected JSON but got: %s", e)
@@ -398,7 +485,7 @@ class HTTPt:
 
         return None
 
-    def _delete(self, url: str, payload: dict = None, is_json: bool = True) -> dict | str | None:
+    async def _delete(self, url: str, payload: dict = None, is_json: bool = True) -> dict | str | None:
         """Execute DELETE request and return response.
 
         Args:
@@ -415,11 +502,12 @@ class HTTPt:
         self._logger.debug("DELETE %s", url)
 
         try:
-            r = self.fetcher.delete(url, timeout=self._timeout)
+            client = await self._get_client()
+            r = await client.delete(url, timeout=self._timeout)
             # For DELETE requests, we also consider 204 (No Content) as success
             if r.status_code in [httpx.codes.OK, httpx.codes.NO_CONTENT]:
                 try:
-                    return r.json() if is_json else r.text
+                    return await r.json() if is_json else r.text
                 except (httpx.DecodingError, ValueError) as e:
                     if is_json:
                         self._logger.error("Expected JSON but got: %s", e)
@@ -435,7 +523,7 @@ class HTTPt:
 
         return None
 
-    def _head(self, url: str, params: dict = None) -> dict | str | None:
+    async def _head(self, url: str, params: dict = None) -> dict | str | None:
         """Execute HEAD request and return response headers.
 
         Args:
@@ -453,7 +541,8 @@ class HTTPt:
             params = dict()
 
         try:
-            r = self.fetcher.head(url, timeout=self._timeout, params=params)
+            client = await self._get_client()
+            r = await client.head(url, timeout=self._timeout, params=params)
             if r.status_code == httpx.codes.OK:
                 return dict(r.headers)
             self._logger.warning("HEAD %s failed with status %d", url, r.status_code)
@@ -467,7 +556,7 @@ class HTTPt:
 
         return None
 
-    def _options(self, url: str) -> dict | str | None:
+    async def _options(self, url: str) -> dict | str | None:
         """Execute OPTIONS request and return response.
 
         Args:
@@ -480,7 +569,8 @@ class HTTPt:
         self._logger.debug("OPTIONS %s", url)
 
         try:
-            r = self.fetcher.options(url, timeout=self._timeout)
+            client = await self._get_client()
+            r = await client.options(url, timeout=self._timeout)
             if r.status_code == httpx.codes.OK:
                 return dict(r.headers)
             self._logger.warning("OPTIONS %s failed with status %d", url, r.status_code)
@@ -494,7 +584,7 @@ class HTTPt:
 
         return None
 
-    def _post(self, url: str, payload: dict = None, is_json: bool = True) -> dict | str | None:
+    async def _post(self, url: str, payload: dict = None, is_json: bool = True) -> dict | str | None:
         """Execute POST request and return response.
 
         Args:
@@ -514,7 +604,8 @@ class HTTPt:
             payload = dict()
 
         try:
-            r = self.fetcher.post(
+            client = await self._get_client()
+            r = await client.post(
                 url,
                 json=payload if is_json else None,
                 data=None if is_json else payload,
@@ -522,7 +613,7 @@ class HTTPt:
             )
             if r.status_code == httpx.codes.OK:
                 try:
-                    return r.json() if is_json else r.text
+                    return await r.json() if is_json else r.text
                 except (httpx.DecodingError, ValueError) as e:
                     if is_json:
                         self._logger.error("Expected JSON but got: %s", e)
