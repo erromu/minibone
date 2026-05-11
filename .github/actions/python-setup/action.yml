@@ -24,6 +24,8 @@ runs:
     steps:
         - name: Setup Python with pip cache
           uses: actions/setup-python@v5
+          env:
+              FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
           with:
               python-version: ${{ inputs.python-version }}
               cache: "pip"

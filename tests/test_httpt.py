@@ -1,41 +1,45 @@
 import unittest
+from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import httpx
 
 from minibone.httpt import HTTPt
 from minibone.httpt import Verbs
-from minibone.io_threads import IOThreads
 
 
 class TestHTTPt(unittest.TestCase):
     def setUp(self) -> None:
-        """Set up test worker and client."""
-        self.worker = IOThreads()
-        self.client = HTTPt(worker=self.worker)
+        """Set up test client."""
+        self.client = HTTPt()
 
-    def tearDown(self) -> None:
-        """Clean up worker."""
-        self.worker.shutdown()
+    async def tearDown(self) -> None:
+        """Clean up client."""
+        await self.client.aclose()
 
     def test_queue_operations(self) -> None:
         """Test basic queue and response operations."""
-        with patch("minibone.httpt.httpx.Client") as mock_client_class:
+        with patch("minibone.httpt.httpx.AsyncClient") as mock_client_class:
+            # Setup mock async client
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+
             # Setup mock responses
-            mock_client = mock_client_class.return_value
-            mock_response_get = mock_client.get.return_value
+            mock_response_get = AsyncMock()
             mock_response_get.status_code = 200
             mock_response_get.json.return_value = {
                 "args": {"foo": "bar"},
                 "url": "https://httpbin.org/anything?foo=bar",
             }
+            mock_client.get.return_value = mock_response_get
 
-            mock_response_post = mock_client.post.return_value
+            mock_response_post = AsyncMock()
             mock_response_post.status_code = 200
             mock_response_post.json.return_value = {"url": "https://httpbin.org/post"}
+            mock_client.post.return_value = mock_response_post
 
-            # Create client with mocked httpx.Client
-            client = HTTPt(worker=self.worker)
+            # Create client with mocked httpx.AsyncClient
+            client = HTTPt()
 
             # Test GET request
             uid1 = client.queue_get(url="https://httpbin.org/anything", params={"foo": "bar"})
@@ -50,10 +54,14 @@ class TestHTTPt(unittest.TestCase):
 
     def test_async_operations(self) -> None:
         """Test async response retrieval."""
-        with patch("minibone.httpt.httpx.Client") as mock_client:
-            mock_response = mock_client.return_value.get.return_value
+        with patch("minibone.httpt.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            mock_response = AsyncMock()
             mock_response.status_code = 200
             mock_response.json.return_value = {"test": "async"}
+            mock_client.get.return_value = mock_response
 
             uid = self.client.queue_get(url="https://test.com")
             # Note: We can't easily test the async method in a synchronous test
@@ -81,41 +89,51 @@ class TestHTTPt(unittest.TestCase):
         self.assertEqual(Verbs.HEAD.value, "HEAD")
         self.assertEqual(Verbs.OPTIONS.value, "OPTIONS")
 
-    def test_all_http_methods(self) -> None:
+    def test_all_http_methods(self) -> None:  # noqa: PLR0915
         """Test all HTTP methods."""
-        with patch("minibone.httpt.httpx.Client") as mock_client_class:
+        with patch("minibone.httpt.httpx.AsyncClient") as mock_client_class:
+            # Setup mock async client
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+
             # Setup mock responses to return successful status codes
-            mock_client = mock_client_class.return_value
-            mock_response_get = mock_client.get.return_value
+            mock_response_get = AsyncMock()
             mock_response_get.status_code = httpx.codes.OK
             mock_response_get.json.return_value = {"success": True}
+            mock_client.get.return_value = mock_response_get
 
-            mock_response_post = mock_client.post.return_value
+            mock_response_post = AsyncMock()
             mock_response_post.status_code = httpx.codes.OK
             mock_response_post.json.return_value = {"success": True}
+            mock_client.post.return_value = mock_response_post
 
-            mock_response_put = mock_client.put.return_value
+            mock_response_put = AsyncMock()
             mock_response_put.status_code = httpx.codes.OK
             mock_response_put.json.return_value = {"success": True}
+            mock_client.put.return_value = mock_response_put
 
-            mock_response_patch = mock_client.patch.return_value
+            mock_response_patch = AsyncMock()
             mock_response_patch.status_code = httpx.codes.OK
             mock_response_patch.json.return_value = {"success": True}
+            mock_client.patch.return_value = mock_response_patch
 
-            mock_response_delete = mock_client.delete.return_value
+            mock_response_delete = AsyncMock()
             mock_response_delete.status_code = httpx.codes.OK
             mock_response_delete.json.return_value = {"success": True}
+            mock_client.delete.return_value = mock_response_delete
 
-            mock_response_head = mock_client.head.return_value
+            mock_response_head = AsyncMock()
             mock_response_head.status_code = httpx.codes.OK
             mock_response_head.headers = {"Content-Type": "application/json"}
+            mock_client.head.return_value = mock_response_head
 
-            mock_response_options = mock_client.options.return_value
+            mock_response_options = AsyncMock()
             mock_response_options.status_code = httpx.codes.OK
             mock_response_options.headers = {"Allow": "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS"}
+            mock_client.options.return_value = mock_response_options
 
-            # Create client with mocked httpx.Client
-            client = HTTPt(worker=self.worker)
+            # Create client with mocked httpx.AsyncClient
+            client = HTTPt()
 
             # Test that all methods can be called and return a response
             uid1 = client.queue_get(url="https://httpbin.org/get")
