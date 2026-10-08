@@ -140,6 +140,7 @@ class Emailer(Daemon):
         from_address: str,
         to: str | list[str],
         subject: str,
+        *,
         content_txt: str | None = None,
         content_html: str | None = None,
         cc: str | list[str] | None = None,
