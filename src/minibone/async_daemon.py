@@ -1,174 +1,235 @@
+"""Periodic task runner built on asyncio.
+
+Runs a coroutine callback or subclass-provided ``on_process`` on a fixed
+interval as an asyncio task. Safe to start, stop, and restart.
+
+Key behaviors:
+- First ``on_process`` call happens immediately after ``start()``.
+- ``stop()`` signals the loop, waits for the current iteration to finish
+  gracefully, and force-cancels only if the graceful window expires.
+- ``on_process`` exceptions are logged and do not kill the loop.
+- The same instance can be started again after ``stop()``.
+"""
+
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import logging
 import time
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 from typing import Any
 
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
 class AsyncDaemon:
-    """Class to run a periodic task using asyncio instead of threads
+    """Run a periodic task as an asyncio task.
 
-    Usage (Subclassing):
-    -------------------
-    class MyAsyncDaemon(AsyncDaemon):
-        def __init__(self):
-            super().__init__(name="my_task", interval=10)
+    Subclassing:
+        class MyDaemon(AsyncDaemon):
+            def __init__(self):
+                super().__init__(name="my_task", interval=10)
 
-        async def on_process(self):
-            # Your periodic task logic here
-            pass
+            async def on_process(self):
+                ...
 
-    Usage (Callback):
-    ----------------
-    async def my_task():
-        # Your periodic task logic here
-        pass
+    Callback:
+        async def my_task():
+            ...
 
-    daemon = AsyncDaemon(name="my_task", interval=10, callback=my_task)
+        daemon = AsyncDaemon(name="my_task", interval=10, callback=my_task)
 
-    Common Parameters:
-    -----------------
-    name: str - Name for the task (helpful for debugging)
-    interval: int - Seconds between executions (>= 0)
-    sleep: float - Seconds to sleep between checks (0 <= sleep <= 1)
-    callback: callable - Optional async function to call instead of on_process
-    iter: int - Number of iterations (-1 for infinite)
-    **kwargs - Additional params you need to pass
+    Parameters:
+        name          str       Task name for debugging.
+        interval      float     Minimum seconds between ``on_process`` calls.
+                                Must be >= 0. ``0`` runs as fast as possible
+                                (bounded only by ``sleep``).
+        sleep         float     Poll granularity in seconds. Must be in
+                                ``[0, 1]``. Lower values reduce latency at
+                                the cost of more wake-ups. This is *not* the
+                                task interval; it is how often the loop
+                                checks whether the interval has elapsed.
+                                Set to 0 to disable sleeping (high CPU).
+        callback      async     Optional. Awaited instead of ``on_process``.
+        iter          int       Number of times to run. ``-1`` runs forever.
+        stop_timeout  float     Graceful shutdown budget in seconds. After
+                                this elapses, the task is force-cancelled.
+        **kwargs                Forwarded to ``on_process`` / ``callback``.
 
-    Async Safety:
-    -------------
-    - Use asyncio locks for async-safe operations:
-      async with self.lock:
-          # Critical section
-    - Avoid shared state between tasks when possible
-
-    Examples:
-    --------
-    # Using callback
-    async def my_callback():
-        print("Task executed")
-
-    daemon = AsyncDaemon(name="test", interval=1, callback=my_callback)
-    await daemon.start()
-
-    # Using subclassing
-    class MyDaemon(AsyncDaemon):
-        async def on_process(self):
-            print("Task executed")
-
-    daemon = MyDaemon(name="test", interval=1)
-    await daemon.start()
+    Async safety:
+        The internal ``lock`` is provided for subclasses. Use it around any
+        shared mutable state accessed by both ``on_process`` and the caller.
 
     Notes:
-    ------
-    - start() returns a task that can be awaited or cancelled
-    - stop() will wait for current iteration to complete
-    - All callback and on_process methods must be async
+        - ``on_process`` (or ``callback``) must accept the same ``**kwargs``
+          passed to the constructor. The base ``on_process`` signature
+          already accepts ``**kwargs``.
+        - First call is immediate on ``start()``. Subsequent calls wait at
+          least ``interval`` seconds between invocations.
+        - ``asyncio.Lock`` / ``asyncio.Event`` are constructed lazily on
+          the running loop in modern Python (3.10+); creating an
+          ``AsyncDaemon`` outside a running loop is fine as long as
+          ``start()`` is awaited inside one.
     """
 
     def __init__(
         self,
         name: str | None = None,
         interval: float = 60,
+        *,
         sleep: float = 0.5,
         callback: Callable | None = None,
         iter: int = -1,
+        stop_timeout: float = 10.0,
         **kwargs: Any,
     ):
-        """
-        Arguments
-        ---------
-        name        str         name for this task
-
-        interval    float       Number of interval seconds to run on_process.
-                                Must be >= 0
-
-        sleep       float       Number of seconds to sleep between iterations when idle.
-                                Must be >= 0 and <= 1. Set to 0 to disable sleeping.
-                                Sleep occurs after calling on_process/callback
-
-        callback    callable    [Optional] An async callable object to be called instead of on_process
-                                Default None.
-
-        iter        int         How many times to run this task. iter must be >= 1 or -1
-                                -1 runs forever until stopped
-
-        kwargs                  Additional params you need to pass
-
-        Notes
-        -----
-        sleep controls how often the task checks for work:
-        - A higher sleep value reduces CPU usage but increases response time
-        - A value of 0 will poll continuously (high CPU usage)
-
-        Recommended values:
-        - 0.01 - 0.1 for high priority tasks
-        - 0.5 - 1.0 for background tasks
-        """
         assert not name or isinstance(name, str)
-        assert isinstance(interval, float | int) and interval >= 0
-        assert isinstance(sleep, float | int) and sleep >= 0 and sleep <= 1
+        assert isinstance(interval, (int, float)) and interval >= 0
+        assert isinstance(sleep, (int, float)) and 0 <= sleep <= 1
         assert not callback or (callable(callback) and asyncio.iscoroutinefunction(callback))
         assert isinstance(iter, int) and (iter == -1 or iter >= 1)
-        self._logger = logging.getLogger(__class__.__name__)
+        assert isinstance(stop_timeout, (int, float)) and stop_timeout > 0
+
+        self._logger = logging.getLogger(self.__class__.__name__)
 
         self.lock = asyncio.Lock()
-        self._stopping = False
+
+        # asyncio.Event is the correct primitive for cross-task signalling:
+        # atomic, awaitable, and clearable (so restart is trivial).
+        self._stop_event = asyncio.Event()
 
         self._name = name
         self._interval = interval
         self._sleep = sleep
-        self._check = 0
         self._iter = iter
-        self._count = 0
-
         self._callback = callback
         self._kwargs = kwargs
+        self._stop_timeout = stop_timeout
+
+        # Set in start(). Kept None until then so restart is possible.
         self._task: asyncio.Task | None = None
 
-    async def on_process(self) -> None:
-        """Async method to be called on each iteration.
-        Override this with your logic when not using a callback.
+        # Loop state, reset on each start().
+        self._check = 0.0
+        self._count = 0
 
-        Note:
-        -----
-        For async safety:
-        - Use async with self.lock context manager:
-          async with self.lock:
-              # Critical section
-        - Avoid modifying shared state without locking
+    # -- Public API -------------------------------------------------------
 
-        Example:
-        -------
-        async def on_process(self):
-            async with self.lock:
-                # Async-safe operations here
-                await self.process_data()
+    async def start(self) -> asyncio.Task:
+        """Start the periodic task.
+
+        Returns:
+            The asyncio Task that runs the loop.
+
+        Raises:
+            RuntimeError: if the task is already running.
+        """
+        if self._task is not None and not self._task.done():
+            raise RuntimeError("Task is already running")
+
+        self._stop_event.clear()
+        self._check = 0.0
+        self._count = 0
+
+        self._task = asyncio.create_task(self._do_process(), name=self._name)
+
+        self._logger.debug(
+            "started %s interval=%.2f sleep=%.2f iter=%d",
+            self._name,
+            self._interval,
+            self._sleep,
+            self._iter,
+        )
+
+        return self._task
+
+    async def stop(self, timeout: float | None = None) -> None:
+        """Signal the loop to stop and wait for it to exit.
+
+        Waits up to ``timeout`` seconds (default: ``stop_timeout`` from the
+        constructor) for the current iteration to complete. If the task
+        does not exit in time, it is force-cancelled.
+
+        Safe to call when not running.
+        """
+        timeout = self._stop_timeout if timeout is None else timeout
+
+        # Signal graceful stop. The loop checks this at the top of each
+        # iteration, so a long-running on_process finishes naturally.
+        self._stop_event.set()
+
+        if self._task is None or self._task.done():
+            self._logger.debug("stopped %s (not running)", self._name)
+            return
+
+        try:
+            await asyncio.wait_for(self._task, timeout=timeout)
+        except asyncio.TimeoutError:
+            self._logger.warning(
+                "Task %s did not stop within %.1fs, cancelling",
+                self._name,
+                timeout,
+            )
+            # wait_for already requested cancellation. Await to reap.
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._task
+        except asyncio.CancelledError:
+            # If we ourselves are being cancelled, propagate.
+            raise
+
+        self._logger.debug(
+            "stopped %s interval=%.2f sleep=%.2f iter=%d",
+            self._name,
+            self._interval,
+            self._sleep,
+            self._iter,
+        )
+
+    def is_running(self) -> bool:
+        """Return True if the task is currently running."""
+        return self._task is not None and not self._task.done()
+
+    # -- Hook for subclasses ---------------------------------------------
+
+    async def on_process(self, **kwargs: Any) -> None:
+        """Called on each interval.
+
+        Override in subclasses. Use ``async with self.lock`` around shared
+        state.
+
+        Exceptions raised here are logged and do not stop the loop.
         """
         pass
 
-    async def _do_process(self) -> None:
-        """Internal async method that runs the periodic task."""
-        try:
-            while True:
-                if self._stopping:
-                    return
+    # -- Internals --------------------------------------------------------
 
-                epoch = time.time()
-                if epoch > self._check:
-                    self._check = epoch + self._interval
+    async def _do_process(self) -> None:
+        try:
+            while not self._stop_event.is_set():
+                now = time.monotonic()
+                if now >= self._check:
+                    self._check = now + self._interval
 
                     try:
                         if self._callback:
-                            if not asyncio.iscoroutinefunction(self._callback):
-                                raise TypeError(f"Callback {self._callback.__name__} must be an async function")
                             await self._callback(**self._kwargs)
                         else:
                             await self.on_process(**self._kwargs)
+                    except asyncio.CancelledError:
+                        # Never swallow cancellation.
+                        raise
                     except Exception as e:
-                        self._logger.error("Error in %s task: %s", self._name, str(e))
-                        # Continue running despite errors
+                        # Keep the loop alive across a single bad iteration.
+                        # Includes traceback for diagnosis.
+                        self._logger.exception(
+                            "%s raised on iteration %d: %s",
+                            self._name,
+                            self._count,
+                            e,
+                        )
 
                     if self._iter > 0:
                         self._count += 1
@@ -180,57 +241,3 @@ class AsyncDaemon:
         except asyncio.CancelledError:
             self._logger.debug("Task %s was cancelled", self._name)
             raise
-        except Exception as e:
-            self._logger.error("Unexpected error in %s task: %s", self._name, str(e))
-
-    async def start(self) -> asyncio.Task:
-        """Start running on_process/callback periodically.
-
-        Returns:
-        -------
-        asyncio.Task - The task object that can be awaited or cancelled
-
-        Raises:
-        ------
-        RuntimeError: If task is already running
-        """
-        if self._task and not self._task.done():
-            raise RuntimeError("Task is already running")
-
-        self._stopping = False
-        self._task = asyncio.create_task(self._do_process(), name=self._name)
-
-        self._logger.debug(
-            "started %s task at interval: %.2f sleep: %.2f iterate: %d",
-            self._name,
-            self._interval,
-            self._sleep,
-            self._iter,
-        )
-
-        return self._task
-
-    async def stop(self) -> None:
-        """Stop executing on_process/callback and exit the task.
-
-        Will wait for current iteration to complete.
-        """
-        async with self.lock:
-            self._stopping = True
-
-        if self._task and not self._task.done():
-            self._task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._task
-
-        self._logger.debug(
-            "stopping %s task at interval: %.2f sleep: %.2f iterate: %d",
-            self._name,
-            self._interval,
-            self._sleep,
-            self._iter,
-        )
-
-    def is_running(self) -> bool:
-        """Check if the daemon task is currently running."""
-        return self._task is not None and not self._task.done()

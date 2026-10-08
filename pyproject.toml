@@ -1,5 +1,5 @@
-# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/ 
-# https://packaging.python.org/en/latest/specifications/core-metadata/ 
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+# https://packaging.python.org/en/latest/specifications/core-metadata/
 
 [build-system]
 requires      = ["setuptools>=68", "wheel"]
@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "minibone"
-version = "0.9.3"
+version = "0.10.0"
 description = "Small boilerplate with tools for concurrent/parallel processing."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -20,7 +20,7 @@ authors = [
 
 
 
-# https://pypi.org/classifiers/ 
+# https://pypi.org/classifiers/
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -41,11 +41,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.0.2",
-    "pytest-asyncio>=1.3.0",
-    "ruff>=0.15.7",
+    "build>=1.6.1",
+    "ruff>=0.16.9",
+    "twine>=7.0.0"
 ]
-
 
 
 [project.urls]
@@ -72,6 +71,7 @@ include = ["minibone"]
 target-version = "py310"
 line-length    = 120
 extend-include = ["*.pyi"]
+exclude = ["*.md", "*.mdx", "docs/"]
 
 [tool.ruff.lint]
 select = [
@@ -96,7 +96,7 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party      = ["src"]        # treat anything under src/ as first-party
-known-third-party      = ["fastapi", "pydantic", "sqlalchemy"]  # optional: silence guessing
+known-third-party      = []  # optional: silence guessing
 default-section        = "third-party"  # fallback for anything unmatched
 
 # --- layout tweaks ---
@@ -116,5 +116,4 @@ force-single-line      = true           # Enforces one import per line
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
-
 
