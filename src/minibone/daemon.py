@@ -73,6 +73,7 @@ class Daemon:
         self,
         name: str | None = None,
         interval: float = 60,
+        *,
         sleep: float = 0.5,
         callback: Callable | None = None,
         iter: int = -1,

@@ -115,5 +115,4 @@ force-single-line      = true           # Enforces one import per line
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
-
-
+exclude = ["*.md", "*.mdx", "docs/"]

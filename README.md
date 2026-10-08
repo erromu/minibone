@@ -53,7 +53,7 @@ layers, merged in this order (lowest to highest priority):
 cfg = Config.from_toml(
     "config.toml",
     defaults={"listen": "localhost", "port": 80},
-    overrides={"port": 9000},   # env vars, CLI args, tests...
+    overrides={"port": 9000},  # env vars, CLI args, tests...
 )
 # listen -> "localhost" (from defaults)
 # port   -> 9000        (overrides beat everything)
@@ -72,8 +72,8 @@ your code. In such cases, you may want to subclass `Config` for easier usage.
 ```python
 from minibone.config import Config
 
-class MyConfig(Config):
 
+class MyConfig(Config):
     def __init__(self):
         defaults = {"main": {"listen": "localhost", "port": 80}}
         settings = Config.from_toml(
@@ -90,6 +90,7 @@ class MyConfig(Config):
     @property
     def port(self) -> int:
         return self["main"]["port"]
+
 
 if __name__ == "__main__":
     cfg = MyConfig()
@@ -296,12 +297,11 @@ import logging
 from minibone.logging import setup_log
 
 if __name__ == "__main__":
-
     # setup_log must be called only once in your code.
     # You have to choose whether to log to stdout or to a file when calling it.
 
     setup_log(level="INFO")
-    logging.info('This is a log to stdout')
+    logging.info("This is a log to stdout")
 
     # Or call the next lines instead if you want to log into a file:
     # setup_log(file="sample.log", level="INFO")
