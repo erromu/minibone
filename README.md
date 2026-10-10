@@ -2,7 +2,69 @@
 
 [![Check](https://github.com/erromu/minibone/actions/workflows/python-check.yml/badge.svg)](https://github.com/erromu/minibone/actions/workflows/python-check.yml) [![Deploy](https://github.com/erromu/minibone/actions/workflows/python-publish.yml/badge.svg)](https://github.com/erromu/minibone/actions/workflows/python-publish.yml) [![PyPI version](https://badge.fury.io/py/minibone.svg)](https://pypi.org/project/minibone)
 
-minibone is an easy-to-use yet powerful boilerplate for multithreading, multiprocessing, and other functionalities:
+## Why minibone
+
+minibone was written for [urim.vip](https://urim.vip/) — a real-time
+crypto dashboard that ingests 1.2M–30M ticks per day from Binance order
+books across 10–20 symbols. The problem it solves is narrow:
+
+**Real-time ingest cannot be blocked by anything else.** Not by CPU-bound
+math. Not by HTTP calls to external services. Not by sending email. Not
+by writing files to cold storage.
+
+Celery, RQ, and similar tools are the wrong shape for this. They assume a
+broker, serialize every job, and pick work up "eventually" — hundreds of
+milliseconds of overhead per task, at minimum. That's fine for background
+jobs. It's fatal for a pipeline that sees new ticks every few milliseconds.
+
+minibone takes the opposite approach: **in-process concurrency primitives,
+no broker required**, each shaped to a specific kind of work.
+
+- **`Daemon` / `AsyncDaemon`** — periodic tasks that must not drift. Log
+  rotation, health checks, file flushing, reconnection attempts. Bounded
+  shutdown, exceptions logged without killing the loop, restartable.
+- **`IOThreads`** — a bounded thread pool for IO-bound work. HTTP fetches,
+  disk reads, anything that waits on a socket.
+- **`PARProcesses`** — a process pool for CPU-bound work. The technical
+  indicator pipeline that computes 150–200 indicators per second runs
+  here, out of the GIL's way.
+- **`Emailer`** — queue-and-forget email over SMTP. Enqueue from any
+  thread; the worker drains on its own schedule. Transient failures
+  retry, permanent ones drop with a log line. It never touches the
+  ingest path.
+- **`Storing`** — queue-and-forget file writes. Cold storage of raw ticks
+  and computed features, flushed on its own schedule so the writer never
+  blocks the reader.
+- **`HTTPt`** — concurrent HTTP requests for enrichment and scraping.
+- **`Config` / `Logging` / `Templater`** — the boring pieces every
+  production service needs, done once and done carefully.
+
+The common thread: **each primitive owns its own loop and never asks the
+caller to wait.** You start it, you hand it work, you stop it when the
+process shuts down. Nothing else.
+
+### What minibone is not
+
+- **Not a task queue.** No broker, no worker fleet, no distributed
+  coordination. If you need those, use Celery.
+- **Not a framework.** No application structure, no enforced conventions,
+  no plugin system.
+- **Not a general-purpose concurrency toolkit.** Every class exists
+  because a specific production problem needed it.
+
+### Who it's for
+
+Anyone building latency-sensitive services in Python where the main loop
+must stay responsive. If you can afford to wait 500 ms for a task to
+reach a Celery worker, minibone is overkill. If you can't, it's the right
+shape.
+
+## Summary
+
+minibone is a small set of in-process concurrency primitives for
+latency-sensitive Python services. It was extracted from
+[urim.vip](https://urim.vip) and is used in production at
+[api.ninjanojutsu.com](https://api.ninjanojutsu.com/about).
 
 - **Config**: To handle configuration settings
 - **Daemon**: To run a periodic task in another thread
@@ -15,7 +77,26 @@ minibone is an easy-to-use yet powerful boilerplate for multithreading, multipro
 - **PARProcesses**: To run parallel CPU-bound tasks
 - **Storing**: To queue and store files periodically in a thread (queue and forget)
 
-It will be deployed to PyPI when a new release is created.
+Releases are published to PyPI automatically when a tagged release is created on GitHub.
+
+## Used in production
+
+minibone runs the backend of [api.ninjanojutsu.com](https://api.ninjanojutsu.com/about) —
+a Solana-based skill game with real-time WebSocket matches.
+
+The service exposes a standard health surface, all live:
+
+- [`/about`](https://api.ninjanojutsu.com/about) — project identity
+- [`/health`](https://api.ninjanojutsu.com/health) — deep check including database connectivity
+- [`/ready`](https://api.ninjanojutsu.com/ready) — readiness probe
+
+minibone powers the underlying infrastructure:
+
+- `AsyncDaemon` drives matchmaking queues, combat_system, and the newsletter reconciliation loop
+- `Emailer` handles transactional mail — confirmation, welcome, unsubscribe.
+- `Config` layers defaults, TOML, and environment variables for every
+  setting the API reads at startup.
+- `AsyncDaemon` also runs periodic cleanup and health checks.
 
 ## Installation
 
