@@ -8,7 +8,7 @@ minibone is an easy-to-use yet powerful boilerplate for multithreading, multipro
 - **Daemon**: To run a periodic task in another thread
 - **AsyncDaemon**: To run a periodic task on the asyncio loop
 - **Emailer**: To send emails in concurrent threads
-- **HTMLBase**: To render HTML using snippets and TOML configuration files in async mode
+- **Templater**: To render text templates with `${placeholder}` substitution, from a file or a TOML config
 - **HTTPt**: HTTP client to perform concurrent requests in threads
 - **Logging**: To set up a logger friendly to file rotation
 - **IOThreads**: To run concurrent tasks in threads
@@ -109,6 +109,86 @@ if __name__ == "__main__":
   `list`, `dict`, `bool`, `datetime`, `date`, `time`, or `None`.
 - `sha256` returns a stable hash of the current settings. `sha1` still exists
   but is deprecated and emits a `DeprecationWarning`.
+
+## Templater
+
+Render text templates using `${placeholder}` substitution. Two entry points,
+one for runtime data and one for TOML-driven pages.
+
+```python
+from minibone.templater import Templater
+
+templater = Templater()
+
+# Variables come from the caller — the common case for emails and
+# notifications.
+html = await templater.aiofrom_file("email.html", {"user": "rock"})
+text = await templater.aiofrom_file("email.txt", {"user": "rock"})
+
+# Or from a TOML file, optionally composing snippets from a directory.
+templater = Templater(snippets_path="/path/to/snippets")
+rendered = await templater.aiofrom_toml("index.toml")
+```
+
+### Behavior
+
+- Substitution uses `string.Template.safe_substitute`. Unknown
+  placeholders are left in place rather than raising. A partially
+  populated mapping still produces output, which is useful while
+  iterating on a template and safer for automated sends.
+- Both `aiofrom_file` and `aiofrom_toml` return `None` on any failure —
+  missing file, unreadable file, invalid TOML — and log the reason.
+  Callers decide what to do next; no exceptions to catch.
+- `snippets_path` is optional. When unset, snippet loading is skipped and
+  `aiofrom_toml` renders the main template without composition.
+- Snippet fragments are cached for `cache_life` seconds (default 300).
+  Reloading builds a fresh dict, so fragments deleted from disk do not
+  linger in memory.
+
+### Parameters
+
+| Name            | Type          | Default  | Notes                                                |
+| --------------- | ------------- | -------- | ---------------------------------------------------- |
+| `snippets_path` | `str \| None` | `None`   | Directory of fragments. Used only by `aiofrom_toml`. |
+| `ext`           | `str`         | `"html"` | Fragment file extension.                             |
+| `cache_life`    | `int`         | `300`    | Seconds before fragments reload from disk.           |
+
+### TOML layout for `aiofrom_toml`
+
+```toml
+[page]
+html_file = "index.html"
+title = "Super cool website"
+
+[account]
+user = "John"
+```
+
+- `[page] html_file` names the template file to render.
+- Other keys in `[page]` become substitution variables.
+- Each additional block matches a snippet file of the same name in
+  `snippets_path`. The snippet is rendered with its block's values and
+  substituted into the main template under that block name.
+
+### Migrating from `HTMLBase`
+
+`HTMLBase` (from `minibone.html_base`) is deprecated and will be removed
+in a future release. It emits a `DeprecationWarning` on instantiation.
+
+```python
+# Before
+from minibone.html_base import HTMLBase
+html = HTMLBase(snippets_path="/path/to/snippets")
+rendered = await html.aiofrom_toml("config.toml")
+
+# After
+from minibone.templater import Templater
+templater = Templater(snippets_path="/path/to/snippets")
+rendered = await templater.aiofrom_toml("config.toml")
+```
+
+New code should not import from `minibone.html_base`. See the module
+docstring for the full list of fixes in `Templater`.
 
 ## Daemon
 
