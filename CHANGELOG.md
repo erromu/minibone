@@ -1,3 +1,13 @@
+## [0.10.1] - 2026-10-09
+
+### Added
+
+- `Templater`
+
+### Deprecated
+
+- HTMLBase
+
 ## [0.10.0] - 2026-10-08
 
 ### Added

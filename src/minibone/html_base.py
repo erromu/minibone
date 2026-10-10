@@ -1,6 +1,38 @@
+"""Deprecated: use :mod:`minibone.templater` instead.
+
+This module is kept for backward compatibility. ``HTMLBase`` is the
+predecessor of :class:`minibone.templater.Templater`, which fixes
+several issues:
+
+- ``Templater.aiofrom_file`` allows rendering with caller-provided
+  variables, without a TOML file.
+- ``Templater`` returns ``None`` cleanly on missing files instead of
+  crashing inside ``render``.
+- Snippet cache does not retain fragments that were deleted from disk.
+- Snippet names are resolved with ``Path.stem`` so Windows paths work.
+- ``snippets_path`` is optional, defaulting to ``None``.
+
+Migration::
+
+    # Before
+    from minibone.html_base import HTMLBase
+    html = HTMLBase(snippets_path="/path/to/snippets")
+    rendered = await html.aiofrom_toml("config.toml")
+
+    # After
+    from minibone.templater import Templater
+    templater = Templater(snippets_path="/path/to/snippets")
+    rendered = await templater.aiofrom_toml("config.toml")
+
+New code should not import from this module.
+"""
+
+from __future__ import annotations
+
 import glob
 import logging
 import time
+import warnings
 from pathlib import Path
 from string import Template
 
@@ -9,22 +41,18 @@ import aiofiles
 from minibone.config import Config
 
 
+_DEPRECATION_MESSAGE = (
+    "minibone.html_base.HTMLBase is deprecated and will be removed in a "
+    "future release. Use minibone.templater.Templater instead. "
+    "See the module docstring for migration notes."
+)
+
+
 class HTMLBase:
-    """Class to render HTML templates using snippets and TOML configuration (async capable).
+    """Deprecated. Use :class:`minibone.templater.Templater` instead.
 
-    Features:
-    ---------
-    - Async file operations
-    - Template rendering with string.Template
-    - Snippet caching
-    - TOML configuration support
-
-    Basic Usage:
-    -----------
-    from minibone.html_base import HTMLBase
-
-    html = HTMLBase(snippets_path="/path/to/snippets")
-    rendered = await html.aiofrom_toml("config.toml")
+    Kept only for backward compatibility. Behavior is frozen; bugs are
+    not fixed here. New code should not import this class.
     """
 
     def __init__(self, snippets_path: str = "./html/pages/snippets", ext: str = "html", cache_life: int = 300):
@@ -36,6 +64,8 @@ class HTMLBase:
             ext: File extension for snippets (default: "html")
             cache_life: Cache lifetime in seconds (default: 300)
         """
+        warnings.warn(_DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2)
+
         assert isinstance(snippets_path, str)
         assert isinstance(ext, str)
         assert isinstance(cache_life, int)
