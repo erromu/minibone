@@ -455,17 +455,17 @@ It is friendly to file rotation (when setting output to a file).
 ```python
 import logging
 
-from minibone.logging import setup_log
+from minibone.logging_utils import setup_logging;
 
 if __name__ == "__main__":
     # setup_log must be called only once in your code.
     # You have to choose whether to log to stdout or to a file when calling it.
 
-    setup_log(level="INFO")
+    setup_logging(level="INFO")
     logging.info("This is a log to stdout")
 
     # Or call the next lines instead if you want to log into a file:
-    # setup_log(file="sample.log", level="INFO")
+    # setup_logging(file="sample.log", level="INFO")
     # logging.info('yay!')
 ```
 
